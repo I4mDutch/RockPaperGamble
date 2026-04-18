@@ -36,12 +36,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user, guestUser } = get()
     
     if (user) {
+      // 1. Update Auth Metadata
       const { data, error } = await supabase.auth.updateUser({
         data: {
           full_name: updates.displayName ?? user.user_metadata.full_name,
           avatar_url: updates.avatarUrl ?? user.user_metadata.avatar_url
         }
       })
+
+      // 2. Update Profiles Table (for game server)
+      await supabase
+        .from('profiles')
+        .update({
+          display_name: updates.displayName ?? user.user_metadata.full_name,
+          avatar_url: updates.avatarUrl ?? user.user_metadata.avatar_url
+        })
+        .eq('id', user.id)
+
       if (!error && data.user) {
         set({ user: data.user })
       }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, User, Check, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useGameStore } from '@/store/gameStore'
 
 interface EditProfileModalProps {
   isOpen: boolean
@@ -27,6 +28,15 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
       displayName,
       avatarUrl: selectedAvatar
     })
+    
+    // Notify server of the change
+    const { socket } = useGameStore.getState()
+    socket?.send(JSON.stringify({
+      type: 'UPDATE_PROFILE',
+      displayName,
+      avatarUrl: selectedAvatar
+    }))
+
     setIsSaving(false)
     onClose()
   }

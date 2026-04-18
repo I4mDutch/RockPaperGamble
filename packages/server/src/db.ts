@@ -7,29 +7,36 @@ export const supabase = (supabaseUrl && supabaseKey)
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
-export async function getPlayerStats(userId: string): Promise<{ coins: number; winStreak: number; avatarUrl?: string }> {
+export async function getPlayerStats(userId: string, initialData?: { displayName?: string, avatarUrl?: string }): Promise<{ coins: number; winStreak: number; avatarUrl?: string }> {
   if (!supabase) return { coins: 1000, winStreak: 0 };
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('coins, win_streak, avatar_url')
+    .select('coins, win_streak, avatar_url, display_name')
     .eq('id', userId)
     .single();
 
   if (error || !data) {
     try {
-      const defaultStats = { id: userId, coins: 1000, win_streak: 0 };
+      const defaultStats = { 
+        id: userId, 
+        coins: 1000, 
+        win_streak: 0,
+        display_name: initialData?.displayName,
+        avatar_url: initialData?.avatarUrl
+      };
       await supabase.from('profiles').upsert(defaultStats);
     } catch (e) {
       console.error("Failed to upsert default stats:", e);
     }
-    return { coins: 1000, winStreak: 0 };
+    return { coins: 1000, winStreak: 0, avatarUrl: initialData?.avatarUrl };
   }
 
+  // If we have a name/avatar in the DB, use it. Otherwise use the initial data.
   return { 
     coins: data.coins, 
     winStreak: data.win_streak || 0,
-    avatarUrl: data.avatar_url 
+    avatarUrl: data.avatar_url || initialData?.avatarUrl 
   };
 }
 

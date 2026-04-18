@@ -98,9 +98,12 @@ export default class Server implements Party.Server {
     }
 
     try {
-      const { coins, winStreak, avatarUrl: dbAvatarUrl } = await getPlayerStats(userId);
-      const queryAvatarUrl = query.get("avatarUrl");
-      const avatarUrl = dbAvatarUrl || queryAvatarUrl || undefined;
+      const queryAvatarUrl = query.get("avatarUrl") || undefined;
+      const { coins, winStreak, avatarUrl: dbAvatarUrl } = await getPlayerStats(userId, { 
+        displayName, 
+        avatarUrl: queryAvatarUrl 
+      });
+      const avatarUrl = dbAvatarUrl || queryAvatarUrl;
 
       const existingPlayer = this.session.players.find((p) => p.id === userId);
       if (!existingPlayer) {
@@ -162,6 +165,18 @@ export default class Server implements Party.Server {
       case "LOCK_CHOICE":
         this.handleLockChoice(userId, msg.choice);
         break;
+      case "UPDATE_PROFILE":
+        this.handleUpdateProfile(userId, msg.displayName, msg.avatarUrl);
+        break;
+    }
+  }
+
+  handleUpdateProfile(userId: string, displayName: string, avatarUrl: string) {
+    const player = this.session.players.find(p => p.id === userId);
+    if (player) {
+      player.displayName = displayName;
+      player.avatarUrl = avatarUrl;
+      this.broadcastSync();
     }
   }
 
