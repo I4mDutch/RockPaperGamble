@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, LogIn, Swords } from 'lucide-react'
 import { useGameStore } from '@/store/gameStore'
-import { useAuthStore } from '@/store/authStore'
+
 
 interface LobbyBrowserProps {
   onJoin: (code: string) => void
