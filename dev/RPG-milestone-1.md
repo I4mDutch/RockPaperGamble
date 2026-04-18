@@ -10,12 +10,12 @@ Establish the monorepo structure, initialize the frontend and server projects, a
 To complete the auth and server setup, I will need the following values from you:
 
 ### 1. Supabase
-- **VITE_SUPABASE_URL**: [REDACTED]
+- **VITE_SUPABASE_URL**: https://tgwfiqihfuwdpuwbzvmb.supabase.co
 - **VITE_SUPABASE_ANON_KEY**: [REDACTED]
 - **SUPABASE_SERVICE_ROLE_KEY**: [REDACTED]
 
 ### 2. Discord (In Discord Developer Portal)
-- **CLIENT_ID**: [REDACTED]
+- **CLIENT_ID**: 1495115600073199830
 - **CLIENT_SECRET**: [REDACTED]
 - **Redirect URI**: https://tgwfiqihfuwdpuwbzvmb.supabase.co/auth/v1/callback
 
@@ -26,22 +26,29 @@ To complete the auth and server setup, I will need the following values from you
 
 ## Task Breakdown
 
-### Phase 1: Workspace Setup
-- [ ] Initialize root `package.json` with NPM Workspaces (`packages/*`).
-- [ ] Create `packages/shared` for cross-project TypeScript types.
-- [ ] Initialize `packages/frontend` (Vite + React + TS + Tailwind CSS v4).
-- [ ] Initialize `packages/server` (PartyKit).
+### Phase 1: Workspace Setup [DONE]
+- [x] Initialize root `package.json` with NPM Workspaces (`packages/*`).
+- [x] Create `packages/shared` for cross-project TypeScript types.
+- [x] Initialize `packages/frontend` (Vite + React + TS + Tailwind CSS v4).
+- [x] Initialize `packages/server` (PartyKit).
 
-### Phase 2: Core Dependencies & Boilerplate
-- [ ] Install `@supabase/supabase-js`, `zustand`, `partysocket` in frontend.
-- [ ] Set up basic folder structure for frontend (components, store, lib).
-- [ ] Set up basic folder structure for server (handlers, logic).
+### Phase 2: Core Dependencies & Boilerplate [DONE]
+- [x] Install `@supabase/supabase-js`, `zustand`, `partysocket` in frontend.
+- [x] Set up basic folder structure for frontend (components, store, lib).
+- [x] Set up basic folder structure for server (handlers, logic).
 
-### Phase 3: Auth & Connection Foundation
-- [ ] Implement `supabase.ts` client initialization.
-- [ ] Create `authStore.ts` in Zustand to manage sessions.
-- [ ] Build a skeleton `LoginPage` with the Discord login trigger.
-- [ ] Build a skeleton `PartyKit` handler that validates JWTs (placeholders until keys provided).
+### Phase 3: Game Logic & Persistence [DONE]
+- [x] Implement `supabase.ts` client initialization.
+- [x] Create `authStore.ts` in Zustand to manage sessions.
+- [x] Build Rock, Paper, Scissors server-side engine.
+- [x] Integrate parimutuel betting and tie-breaking (Push).
+- [x] Sync coins to Supabase `profiles` table.
+
+### Phase 4: Deployment [IN PROGRESS]
+- [x] Deploy Server to PartyKit.
+- [x] Push code to GitHub.
+- [ ] Finalize Cloudflare Pages Environment Variables.
+- [ ] Run Supabase SQL migrations.
 
 ---
 

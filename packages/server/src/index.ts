@@ -47,13 +47,6 @@ export default class Server implements Party.Server {
     }
   }
 
-  startNewRound() {
-    this.session.phase = "CHALLENGE_SELECT";
-    this.session.timeLeft = 15;
-    this.currentDuel = null;
-    this.broadcastSync();
-  }
-
   startRPSRound() {
     this.session.phase = "RPS_ROUND";
     this.session.timeLeft = 20;
