@@ -4,12 +4,9 @@ import { useAuthStore } from '@/store/authStore'
 import { Swords, Target, Timer, Coins, Gift, Ban } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 
-const WAGER_OPTIONS = [0, 100, 500, 1000]
-
 export const ChallengeSelector = () => {
   const { session, socket } = useGameStore()
   const { user, guestUser } = useAuthStore()
-  const [wager, setWager] = useState(0)
   const [giftTarget, setGiftTarget] = useState<string | null>(null)
   const [giftAmount, setGiftAmount] = useState(100)
 
@@ -25,7 +22,7 @@ export const ChallengeSelector = () => {
     socket?.send(JSON.stringify({
       type: 'SELECT_CHALLENGER',
       targetId,
-      amount: wager
+      amount: 0
     }))
   }
 
@@ -61,40 +58,6 @@ export const ChallengeSelector = () => {
           <span className="text-lg font-black italic">{session.timeLeft}s</span>
         </div>
       </div>
-
-      {/* Wager Selector — always visible for challengers */}
-      {isChallenger && !isBroke && (
-        <div className="flex flex-col items-center gap-4 bg-slate-800/40 p-6 rounded-3xl border border-white/5">
-          <div className="flex items-center gap-2 text-slate-300">
-            <Coins size={20} className="text-yellow-500" />
-            <span className="font-bold text-lg">Match Wager</span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            {WAGER_OPTIONS.map((amount) => {
-              const disabled = amount > (currentPlayer?.coins || 0)
-              return (
-                <button
-                  key={amount}
-                  disabled={disabled}
-                  onClick={() => setWager(amount)}
-                  className={`
-                    px-6 py-3 rounded-2xl font-black text-lg transition-all
-                    ${wager === amount 
-                      ? 'bg-brand-primary text-white scale-110 shadow-lg shadow-brand-primary/20' 
-                      : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-white'}
-                    ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-                >
-                  {amount === 0 ? 'FREE' : amount.toLocaleString()}
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-sm text-slate-500 italic">
-            Both players pay this wager. Winner takes all!
-          </p>
-        </div>
-      )}
 
       {/* Gift Coins Modal */}
       {giftTarget && (
