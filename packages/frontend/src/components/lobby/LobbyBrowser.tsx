@@ -10,7 +10,6 @@ interface LobbyBrowserProps {
 export const LobbyBrowser = ({ onJoin }: LobbyBrowserProps) => {
   const [joinCode, setJoinCode] = useState('')
   const { createLobby } = useGameStore()
-  const { user } = useAuthStore()
 
   const handleCreate = () => {
     const code = createLobby()

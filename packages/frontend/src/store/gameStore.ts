@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import PartySocket from 'partysocket'
-import type { GameSession, GamePhase } from '@rpg/shared'
+import type { GameSession } from '@rpg/shared'
 
 interface GameState {
   socket: PartySocket | null

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { LoginPage } from './LoginPage'
 

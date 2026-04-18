@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { LobbyBrowser } from './components/lobby/LobbyBrowser'
 import { LobbyRoom } from './components/lobby/LobbyRoom'
@@ -8,7 +8,7 @@ import { useAuthStore } from './store/authStore'
 
 function GameContent() {
   const [lobbyCode, setLobbyCode] = useState<string | null>(null)
-  const { connect, disconnect, isConnected, session } = useGameStore()
+  const { connect, disconnect, session } = useGameStore()
   const { user, guestUser } = useAuthStore()
 
   const handleJoin = (code: string) => {
