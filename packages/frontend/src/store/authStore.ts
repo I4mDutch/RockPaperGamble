@@ -23,19 +23,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   setGuestUser: (name) => {
     const guest = { id: `guest_${Math.random().toString(36).substr(2, 9)}`, displayName: name }
     localStorage.setItem('rpg_guest', JSON.stringify(guest))
-    set({ guestUser: guest })
+    set({ guestUser: guest, loading: false })
   },
   setSession: (session) => set({ session }),
   signOut: async () => {
     await supabase.auth.signOut()
     localStorage.removeItem('rpg_guest')
-    set({ user: null, session: null, guestUser: null })
+    set({ user: null, session: null, guestUser: null, loading: false })
   },
   initialize: async () => {
+    // 1. Get initial session
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // 2. Check guest
     const guestJson = localStorage.getItem('rpg_guest')
     const guestUser = guestJson ? JSON.parse(guestJson) : null
-    
-    const { data: { session } } = await supabase.auth.getSession()
+
     set({ 
       session, 
       user: session?.user ?? null, 
@@ -43,12 +46,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       loading: false 
     })
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ 
-        session, 
-        user: session?.user ?? null, 
-        loading: false 
-      })
+    // 3. Listen for changes
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        set({ user: null, session: null, guestUser: null, loading: false })
+      } else if (session) {
+        set({ session, user: session.user, loading: false })
+      }
     })
   }
 }))
