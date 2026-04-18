@@ -168,6 +168,9 @@ export default class Server implements Party.Server {
       case "UPDATE_PROFILE":
         this.handleUpdateProfile(userId, msg.displayName, msg.avatarUrl);
         break;
+      case "GIFT_COINS":
+        this.handleGiftCoins(userId, msg.targetId, msg.amount);
+        break;
     }
   }
 
@@ -198,6 +201,17 @@ export default class Server implements Party.Server {
     this.session.roundNumber++;
     this.session.phase = "CHALLENGE_SELECT";
     this.session.timeLeft = 10;
+
+    // Skip broke players in turn order
+    let attempts = 0;
+    while (attempts < this.session.turnOrder.length) {
+      const candidateId = this.session.turnOrder[this.session.activePlayerIndex];
+      const candidate = this.session.players.find(p => p.id === candidateId);
+      if (candidate && candidate.coins > 0) break;
+      this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
+      attempts++;
+    }
+
     this.session.players.forEach(p => {
       p.role = p.id === this.session.turnOrder[this.session.activePlayerIndex] ? "challenger" : "spectator";
     });
@@ -205,13 +219,29 @@ export default class Server implements Party.Server {
     this.broadcastSync();
   }
 
+  handleGiftCoins(senderId: string, targetId: string, amount: number) {
+    if (!amount || amount <= 0) return;
+    const sender = this.session.players.find(p => p.id === senderId);
+    const receiver = this.session.players.find(p => p.id === targetId);
+    if (!sender || !receiver || sender.id === receiver.id) return;
+    if (sender.coins < amount) return;
+
+    sender.coins -= amount;
+    receiver.coins += amount;
+    updatePlayerProfile(sender.id, { coins: sender.coins });
+    updatePlayerProfile(receiver.id, { coins: receiver.coins });
+    this.broadcastSync();
+  }
+
   handleSelectChallenger(userId: string, targetId: string, amount: number = 0) {
     if (this.session.phase !== "CHALLENGE_SELECT") return;
     const challenger = this.session.players.find(p => p.id === userId);
     if (!challenger || challenger.role !== "challenger") return;
+    if (challenger.coins <= 0) return; // broke players can't challenge
 
     const challengee = this.session.players.find(p => p.id === targetId);
     if (!challengee) return;
+    if (challengee.coins <= 0) return; // broke players can't be challenged
 
     // Both players must be able to afford the bet
     const wager = Math.min(amount, challenger.coins, challengee.coins);
