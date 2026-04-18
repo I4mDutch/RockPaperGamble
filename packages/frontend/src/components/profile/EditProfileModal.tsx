@@ -19,7 +19,6 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
   const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar)
   const [isSaving, setIsSaving] = useState(false)
 
-  const isDiscordUser = !!user?.app_metadata?.provider === 'discord' || !!user?.user_metadata?.avatar_url?.includes('discord')
   const discordUsername = user?.user_metadata?.custom_claims?.global_name || user?.user_metadata?.name
 
   const handleSave = async () => {
