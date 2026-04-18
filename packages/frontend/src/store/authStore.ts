@@ -22,7 +22,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: true,
   setUser: (user) => set({ user }),
   setGuestUser: (name) => {
-    const guest = { id: `guest_${Math.random().toString(36).substr(2, 9)}`, displayName: name }
+    const guest = { id: `guest_${Math.random().toString(36).substr(2, 9)}`, displayName: name, avatarUrl: '🎲' }
     localStorage.setItem('rpg_guest', JSON.stringify(guest))
     set({ guestUser: guest, loading: false })
   },
