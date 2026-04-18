@@ -171,12 +171,19 @@ export default class Server implements Party.Server {
     }
   }
 
-  handleUpdateProfile(userId: string, displayName: string, avatarUrl: string) {
+  async handleUpdateProfile(userId: string, displayName: string, avatarUrl: string) {
     const player = this.session.players.find(p => p.id === userId);
     if (player) {
       player.displayName = displayName;
       player.avatarUrl = avatarUrl;
       this.broadcastSync();
+      
+      // Persist the changes to the database
+      try {
+        await updatePlayerProfile(userId, { displayName, avatarUrl } as any);
+      } catch (err) {
+        console.error("Failed to persist profile update:", err);
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
 import { Users, Shield, ArrowLeft, Play } from 'lucide-react'
+import { Avatar } from '@/components/common/Avatar'
 
 interface LobbyRoomProps {
   onLeave: () => void
@@ -54,17 +55,7 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
                 className="flex items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-white/5"
               >
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center overflow-hidden border border-white/5">
-                    {player.avatarUrl && !player.avatarUrl.startsWith('http') ? (
-                      <span className="text-2xl">{player.avatarUrl}</span>
-                    ) : (
-                      <img
-                        src={player.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.displayName}`}
-                        alt={player.displayName}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
+                  <Avatar url={player.avatarUrl} name={player.displayName} size="md" />
                   {session.hostId === player.id && (
                     <div className="absolute -top-2 -right-2 bg-brand-accent text-slate-900 p-1 rounded-lg">
                       <Shield size={12} fill="currentColor" />

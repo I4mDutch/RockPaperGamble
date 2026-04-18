@@ -40,13 +40,14 @@ export async function getPlayerStats(userId: string, initialData?: { displayName
   };
 }
 
-export async function updatePlayerProfile(userId: string, stats: { coins?: number; winStreak?: number; avatarUrl?: string }) {
+export async function updatePlayerProfile(userId: string, stats: { coins?: number; winStreak?: number; avatarUrl?: string; displayName?: string }) {
   if (!supabase) return;
 
   const updateData: any = {};
   if (stats.coins !== undefined) updateData.coins = stats.coins;
   if (stats.winStreak !== undefined) updateData.win_streak = stats.winStreak;
   if (stats.avatarUrl !== undefined) updateData.avatar_url = stats.avatarUrl;
+  if (stats.displayName !== undefined) updateData.display_name = stats.displayName;
 
   await supabase
     .from('profiles')
