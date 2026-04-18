@@ -218,7 +218,7 @@ export default class Server implements Party.Server {
 
     challengee.role = "challengee";
     this.session.phase = "BETTING";
-    this.session.timeLeft = 10;
+    this.session.timeLeft = 28;
     
     // Deduct wagers
     if (wager > 0) {

@@ -73,14 +73,25 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
             <div className="p-8 space-y-8">
               {/* Discord Badge */}
               {user && (
-                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
-                    <ShieldCheck className="text-white" size={24} />
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
+                      <ShieldCheck className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Connected Account</div>
+                      <div className="text-white font-bold">DISCORD: <span className="text-indigo-300">{discordUsername || 'Verified'}</span></div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Connected Account</div>
-                    <div className="text-white font-bold">DISCORD: <span className="text-indigo-300">{discordUsername || 'Verified'}</span></div>
-                  </div>
+                  <button
+                    onClick={async () => {
+                      await useAuthStore.getState().signOut();
+                      onClose();
+                    }}
+                    className="px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/5"
+                  >
+                    Sign Out
+                  </button>
                 </div>
               )}
 
