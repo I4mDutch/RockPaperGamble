@@ -1,0 +1,22 @@
+{
+  "name": "rock-paper-gamble",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "partykit": "0.0.115"
+  },
+  "dependencies": {
+    "partysocket": "1.1.16"
+  }
+}
