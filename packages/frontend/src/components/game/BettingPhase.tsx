@@ -54,7 +54,16 @@ export const BettingPhase = () => {
             <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center border border-white/10 shadow-inner">
               <span className="text-2xl font-black italic text-slate-500">VS</span>
             </div>
-            <div className="flex items-center gap-2 text-brand-accent">
+            
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-2 text-yellow-400 font-black italic text-2xl tracking-tighter drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                <Coins size={24} />
+                <span>{session.currentDuel?.bets.reduce((sum, b) => sum + b.amount, 0).toLocaleString()} 🪙</span>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">PRIZE POOL</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-brand-accent mt-2">
               <Timer size={20} className="animate-pulse" />
               <span className="text-xl font-black italic">{session.timeLeft}s</span>
             </div>

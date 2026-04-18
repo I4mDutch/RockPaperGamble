@@ -58,7 +58,7 @@ export default class Server implements Party.Server {
     // If the round was already resolved (we were just showing the 5s result overlay)
     if (lastRound && lastRound.winner) {
       // Start next round in series
-      this.session.timeLeft = 20;
+      this.session.timeLeft = 15;
       this.currentDuel.rounds.push({
         roundNumber: this.currentDuel.rounds.length + 1,
         winner: undefined
@@ -68,7 +68,7 @@ export default class Server implements Party.Server {
       // For now, let's just force a tie to keep the game moving
       if (lastRound) {
         lastRound.winner = "tie";
-        this.session.timeLeft = 5; // Show "TIE" result for 5 seconds
+        this.session.timeLeft = 3; // Show "TIE" result for 3 seconds
       }
     }
     this.broadcastSync();
@@ -76,7 +76,7 @@ export default class Server implements Party.Server {
 
   startRPSRound() {
     this.session.phase = "RPS_ROUND";
-    this.session.timeLeft = 20;
+    this.session.timeLeft = 15;
     this.broadcastSync();
   }
 
@@ -157,7 +157,7 @@ export default class Server implements Party.Server {
         this.handleStartGame(userId);
         break;
       case "SELECT_CHALLENGER":
-        this.handleSelectChallenger(userId, msg.targetId);
+        this.handleSelectChallenger(userId, msg.targetId, msg.amount);
         break;
       case "PLACE_BET":
         this.handlePlaceBet(userId, msg.targetId, msg.amount);
@@ -197,7 +197,7 @@ export default class Server implements Party.Server {
   startNewRound() {
     this.session.roundNumber++;
     this.session.phase = "CHALLENGE_SELECT";
-    this.session.timeLeft = 15;
+    this.session.timeLeft = 10;
     this.session.players.forEach(p => {
       p.role = p.id === this.session.turnOrder[this.session.activePlayerIndex] ? "challenger" : "spectator";
     });
@@ -205,7 +205,7 @@ export default class Server implements Party.Server {
     this.broadcastSync();
   }
 
-  handleSelectChallenger(userId: string, targetId: string) {
+  handleSelectChallenger(userId: string, targetId: string, amount: number = 0) {
     if (this.session.phase !== "CHALLENGE_SELECT") return;
     const challenger = this.session.players.find(p => p.id === userId);
     if (!challenger || challenger.role !== "challenger") return;
@@ -213,10 +213,21 @@ export default class Server implements Party.Server {
     const challengee = this.session.players.find(p => p.id === targetId);
     if (!challengee) return;
 
+    // Both players must be able to afford the bet
+    const wager = Math.min(amount, challenger.coins, challengee.coins);
+
     challengee.role = "challengee";
     this.session.phase = "BETTING";
-    this.session.timeLeft = 15;
+    this.session.timeLeft = 10;
     
+    // Deduct wagers
+    if (wager > 0) {
+      challenger.coins -= wager;
+      challengee.coins -= wager;
+      updatePlayerProfile(challenger.id, { coins: challenger.coins });
+      updatePlayerProfile(challengee.id, { coins: challengee.coins });
+    }
+
     const duelId = `duel_${Date.now()}`;
     this.session.currentDuelId = duelId;
     this.session.currentDuel = {
@@ -229,7 +240,25 @@ export default class Server implements Party.Server {
         [targetId]: 0
       },
       targetWins: 3,
-      bets: [],
+      bets: wager > 0 ? [
+        // Represent the match wagers as bets so they go into the total prize pool
+        {
+          playerId: challenger.id,
+          targetId: challenger.id, // bet on themselves
+          amount: wager,
+          placedAt: Date.now(),
+          locked: true,
+          payout: 0
+        },
+        {
+          playerId: challengee.id,
+          targetId: challengee.id, // bet on themselves
+          amount: wager,
+          placedAt: Date.now(),
+          locked: true,
+          payout: 0
+        }
+      ] : [],
       status: "active",
       startedAt: Date.now()
     };
@@ -315,7 +344,7 @@ export default class Server implements Party.Server {
       // Stay in RPS_ROUND but reset for next round after a short delay
       // In a real app, we'd use a phase, but for now we'll just let the UI handle the transition
       // based on the presence of the 'winner' in the last round.
-      this.session.timeLeft = 5; // Give players time to see the round result
+      this.session.timeLeft = 3; // Give players time to see the round result
     }
   }
 
@@ -327,25 +356,37 @@ export default class Server implements Party.Server {
     
     const loserId = winnerId === this.currentDuel.challengerId ? this.currentDuel.challengeeId : this.currentDuel.challengerId;
 
+    const totalPool = this.currentDuel.bets.reduce((sum, bet) => sum + bet.amount, 0);
+    const winner = this.session.players.find(p => p.id === winnerId);
+    
+    if (winner) {
+      winner.coins += totalPool;
+    }
+
     this.currentDuel.bets.forEach(bet => {
       const player = this.session.players.find(p => p.id === bet.playerId);
       if (!player) return;
 
       if (bet.targetId === winnerId) {
-        const payout = bet.amount * 2;
-        player.coins += payout;
-        updatePlayerProfile(player.id, { coins: player.coins });
-        bet.payout = payout - bet.amount;
+        if (player.id === winnerId) {
+          // The winner took the whole pool. Their tracked profit is totalPool - their wager.
+          bet.payout = totalPool - bet.amount;
+        } else {
+          // Spectators double their money
+          const payout = bet.amount * 2;
+          player.coins += payout;
+          updatePlayerProfile(player.id, { coins: player.coins });
+          bet.payout = payout - bet.amount;
+        }
       } else {
         bet.payout = -bet.amount;
       }
     });
 
     // Update Win Streaks
-    const winner = this.session.players.find(p => p.id === winnerId);
     if (winner) {
       winner.stats.winStreak = (winner.stats.winStreak || 0) + 1;
-      updatePlayerProfile(winner.id, { winStreak: winner.stats.winStreak });
+      updatePlayerProfile(winner.id, { coins: winner.coins, winStreak: winner.stats.winStreak });
     }
     const loser = this.session.players.find(p => p.id === loserId);
     if (loser) {
@@ -354,7 +395,7 @@ export default class Server implements Party.Server {
     }
 
     this.session.phase = "RESULTS";
-    this.session.timeLeft = 10;
+    this.session.timeLeft = 8;
     this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
     this.broadcastSync();
   }

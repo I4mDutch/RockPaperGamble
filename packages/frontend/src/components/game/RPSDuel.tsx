@@ -62,7 +62,7 @@ export const RPSDuel = () => {
           <div className="flex flex-col items-center gap-6 mb-8">
             <div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
               <span className="text-brand-primary font-black italic tracking-widest uppercase text-sm">
-                ROUND {duel.rounds.length + 1}
+                ROUND {Math.max(1, duel.rounds.length)}
               </span>
             </div>
             
@@ -189,7 +189,7 @@ export const RPSDuel = () => {
                 <motion.div 
                   initial={{ width: "100%" }}
                   animate={{ width: "0%" }}
-                  transition={{ duration: 5, ease: "linear" }}
+                  transition={{ duration: 3, ease: "linear" }}
                   className="h-full bg-brand-primary"
                 />
               </div>

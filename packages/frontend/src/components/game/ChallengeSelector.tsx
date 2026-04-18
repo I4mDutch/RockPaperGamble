@@ -1,22 +1,28 @@
+import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
-import { Swords, Target, Timer } from 'lucide-react'
+import { Swords, Target, Timer, Coins } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
+
+const WAGER_OPTIONS = [0, 100, 500, 1000]
 
 export const ChallengeSelector = () => {
   const { session, socket } = useGameStore()
   const { user, guestUser } = useAuthStore()
+  const [wager, setWager] = useState(0)
 
   if (!session) return null
 
   const userId = user?.id || guestUser?.id
-  const isChallenger = session.players.find(p => p.id === userId)?.role === 'challenger'
+  const currentPlayer = session.players.find(p => p.id === userId)
+  const isChallenger = currentPlayer?.role === 'challenger'
 
   const handleSelect = (targetId: string) => {
     if (!isChallenger) return
     socket?.send(JSON.stringify({
       type: 'SELECT_CHALLENGER',
-      targetId
+      targetId,
+      amount: wager
     }))
   }
 
@@ -39,6 +45,39 @@ export const ChallengeSelector = () => {
           <span className="text-lg font-black italic">{session.timeLeft}s</span>
         </div>
       </div>
+
+      {isChallenger && (
+        <div className="flex flex-col items-center gap-4 bg-slate-800/40 p-6 rounded-3xl border border-white/5">
+          <div className="flex items-center gap-2 text-slate-300">
+            <Coins size={20} className="text-yellow-500" />
+            <span className="font-bold">Set Match Wager</span>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {WAGER_OPTIONS.map((amount) => {
+              const disabled = amount > (currentPlayer?.coins || 0)
+              return (
+                <button
+                  key={amount}
+                  disabled={disabled}
+                  onClick={() => setWager(amount)}
+                  className={`
+                    px-6 py-3 rounded-2xl font-black text-lg transition-all
+                    ${wager === amount 
+                      ? 'bg-brand-primary text-white scale-110 shadow-lg shadow-brand-primary/20' 
+                      : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-white'}
+                    ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  {amount === 0 ? 'FREE' : amount.toLocaleString()}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-sm text-slate-500 italic">
+            Both players must have enough coins. Wagers go to the prize pool!
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {otherPlayers.map((player) => (
