@@ -1,6 +1,6 @@
 import type * as Party from "partykit/server";
 import { GameSession, Player, GamePhase, RPSChoice, Duel, RPSRound, Bet } from "@rpg/shared";
-import { getPlayerCoins, updatePlayerCoins } from './db';
+import { getPlayerStats, updatePlayerProfile } from './db';
 
 export default class Server implements Party.Server {
   session: GameSession;
@@ -41,10 +41,37 @@ export default class Server implements Party.Server {
       case "BETTING":
         this.startRPSRound();
         break;
+      case "RPS_ROUND":
+        this.handleRPSRoundTimeout();
+        break;
       case "RESULTS":
         this.startNewRound();
         break;
     }
+  }
+
+  handleRPSRoundTimeout() {
+    if (!this.currentDuel) return;
+    
+    const lastRound = this.currentDuel.rounds[this.currentDuel.rounds.length - 1];
+    
+    // If the round was already resolved (we were just showing the 5s result overlay)
+    if (lastRound && lastRound.winner) {
+      // Start next round in series
+      this.session.timeLeft = 20;
+      this.currentDuel.rounds.push({
+        roundNumber: this.currentDuel.rounds.length + 1,
+        winner: undefined
+      });
+    } else {
+      // The 20s timer actually ran out without both players picking
+      // For now, let's just force a tie to keep the game moving
+      if (lastRound) {
+        lastRound.winner = "tie";
+        this.session.timeLeft = 5; // Show "TIE" result for 5 seconds
+      }
+    }
+    this.broadcastSync();
   }
 
   startRPSRound() {
@@ -70,22 +97,47 @@ export default class Server implements Party.Server {
       this.session.hostId = userId;
     }
 
-    const persistentCoins = await getPlayerCoins(userId);
+    try {
+      const { coins, winStreak, avatarUrl: dbAvatarUrl } = await getPlayerStats(userId);
+      const queryAvatarUrl = query.get("avatarUrl");
+      const avatarUrl = dbAvatarUrl || queryAvatarUrl || undefined;
 
-    const existingPlayer = this.session.players.find((p) => p.id === userId);
-    if (!existingPlayer) {
-      const newPlayer: Player = {
-        id: userId,
-        displayName: displayName,
-        coins: persistentCoins,
-        isConnected: true,
-        role: "spectator",
-        stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0 },
-      };
-      this.session.players.push(newPlayer);
-    } else {
-      existingPlayer.isConnected = true;
-      existingPlayer.coins = persistentCoins;
+      const existingPlayer = this.session.players.find((p) => p.id === userId);
+      if (!existingPlayer) {
+        const newPlayer: Player = {
+          id: userId,
+          displayName: displayName,
+          avatarUrl: avatarUrl,
+          coins: coins,
+          isConnected: true,
+          role: "spectator",
+          stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: winStreak },
+        };
+        this.session.players.push(newPlayer);
+      } else {
+        existingPlayer.isConnected = true;
+        existingPlayer.displayName = displayName;
+        existingPlayer.avatarUrl = avatarUrl;
+        existingPlayer.coins = coins;
+        // Ensure stats object exists before updating winStreak
+        if (!existingPlayer.stats) {
+          existingPlayer.stats = { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: 0 };
+        }
+        existingPlayer.stats.winStreak = winStreak;
+      }
+    } catch (err) {
+      console.error("Error in onConnect:", err);
+      // Fallback for safety to prevent connection drop
+      if (!this.session.players.find(p => p.id === userId)) {
+        this.session.players.push({
+          id: userId,
+          displayName,
+          coins: 1000,
+          isConnected: true,
+          role: "spectator",
+          stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: 0 }
+        });
+      }
     }
 
     this.broadcastSync();
@@ -150,6 +202,11 @@ export default class Server implements Party.Server {
       challengerId: userId,
       challengeeId: targetId,
       rounds: [],
+      seriesScore: {
+        [userId]: 0,
+        [targetId]: 0
+      },
+      targetWins: 3,
       bets: [],
       status: "active",
       startedAt: Date.now()
@@ -164,12 +221,11 @@ export default class Server implements Party.Server {
     const player = this.session.players.find(p => p.id === userId);
     if (!player || player.coins < amount) return;
     
-    // PREVENT DOUBLE BETTING: Check if this player already has a bet in this duel
     const existingBet = this.currentDuel.bets.find(b => b.playerId === userId);
     if (existingBet) return;
     
     player.coins -= amount;
-    updatePlayerCoins(userId, player.coins);
+    updatePlayerProfile(userId, { coins: player.coins });
     this.currentDuel.bets.push({
       playerId: userId,
       targetId,
@@ -186,19 +242,23 @@ export default class Server implements Party.Server {
     if (this.session.phase !== "RPS_ROUND" || !this.currentDuel) return;
     
     let currentRound = this.currentDuel.rounds[this.currentDuel.rounds.length - 1];
-    if (!currentRound || currentRound.status === "completed") {
+    if (!currentRound || currentRound.winner) {
       currentRound = {
-        choices: {},
-        status: "waiting",
-        winnerId: null
+        roundNumber: (this.currentDuel.rounds.length) + 1,
+        challengerChoice: undefined,
+        challengeeChoice: undefined,
+        winner: undefined
       };
       this.currentDuel.rounds.push(currentRound);
     }
 
-    currentRound.choices[userId] = choice;
+    if (userId === this.currentDuel.challengerId) {
+      currentRound.challengerChoice = choice;
+    } else if (userId === this.currentDuel.challengeeId) {
+      currentRound.challengeeChoice = choice;
+    }
 
-    const { challengerId, challengeeId } = this.currentDuel;
-    if (currentRound.choices[challengerId] && currentRound.choices[challengeeId]) {
+    if (currentRound.challengerChoice && currentRound.challengeeChoice) {
       this.resolveRPS(currentRound);
     }
 
@@ -206,24 +266,35 @@ export default class Server implements Party.Server {
   }
 
   resolveRPS(round: RPSRound) {
-    const { challengerId, challengeeId } = this.currentDuel!;
-    const c1 = round.choices[challengerId];
-    const c2 = round.choices[challengeeId];
+    const { challengerId, challengeeId, seriesScore, targetWins } = this.currentDuel!;
+    const c1 = round.challengerChoice;
+    const c2 = round.challengeeChoice;
 
     if (c1 === c2) {
-      round.winnerId = "draw";
+      round.winner = "tie";
     } else if (
       (c1 === "rock" && c2 === "scissors") ||
       (c1 === "paper" && c2 === "rock") ||
       (c1 === "scissors" && c2 === "paper")
     ) {
-      round.winnerId = challengerId;
+      round.winner = challengerId;
+      seriesScore[challengerId]++;
     } else {
-      round.winnerId = challengeeId;
+      round.winner = challengeeId;
+      seriesScore[challengeeId]++;
     }
 
-    round.status = "completed";
-    this.resolveDuel(round.winnerId!);
+    round.resolvedAt = Date.now();
+
+    // Check if series is won
+    if (round.winner !== "tie" && seriesScore[round.winner] >= targetWins) {
+      this.resolveDuel(round.winner);
+    } else {
+      // Stay in RPS_ROUND but reset for next round after a short delay
+      // In a real app, we'd use a phase, but for now we'll just let the UI handle the transition
+      // based on the presence of the 'winner' in the last round.
+      this.session.timeLeft = 5; // Give players time to see the round result
+    }
   }
 
   resolveDuel(winnerId: string) {
@@ -232,30 +303,36 @@ export default class Server implements Party.Server {
     this.currentDuel.status = "finished";
     this.currentDuel.winnerId = winnerId;
     
-    // "Double or Nothing" or "Push" on Tie
+    const loserId = winnerId === this.currentDuel.challengerId ? this.currentDuel.challengeeId : this.currentDuel.challengerId;
+
     this.currentDuel.bets.forEach(bet => {
       const player = this.session.players.find(p => p.id === bet.playerId);
       if (!player) return;
 
-      if (winnerId === "draw") {
-        // TIE: Return original bet amount (Push)
-        player.coins += bet.amount;
-        updatePlayerCoins(player.id, player.coins);
-        bet.payout = 0; // Or we can show +0 or just show it was a push
-      } else if (bet.targetId === winnerId) {
-        // WIN: Double the bet
+      if (bet.targetId === winnerId) {
         const payout = bet.amount * 2;
         player.coins += payout;
-        updatePlayerCoins(player.id, player.coins);
-        bet.payout = payout - bet.amount; // Net gain for display
+        updatePlayerProfile(player.id, { coins: player.coins });
+        bet.payout = payout - bet.amount;
       } else {
-        // LOSS: Lost the amount
         bet.payout = -bet.amount;
       }
     });
 
+    // Update Win Streaks
+    const winner = this.session.players.find(p => p.id === winnerId);
+    if (winner) {
+      winner.stats.winStreak = (winner.stats.winStreak || 0) + 1;
+      updatePlayerProfile(winner.id, { winStreak: winner.stats.winStreak });
+    }
+    const loser = this.session.players.find(p => p.id === loserId);
+    if (loser) {
+      loser.stats.winStreak = 0;
+      updatePlayerProfile(loser.id, { winStreak: 0 });
+    }
+
     this.session.phase = "RESULTS";
-    this.session.timeLeft = 8;
+    this.session.timeLeft = 10;
     this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
     this.broadcastSync();
   }

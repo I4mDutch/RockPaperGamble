@@ -8,7 +8,7 @@ interface GameState {
   isConnected: boolean
   
   // Actions
-  connect: (lobbyId: string, userId: string, displayName: string) => void
+  connect: (lobbyId: string, userId: string, displayName: string, avatarUrl?: string) => void
   disconnect: () => void
   createLobby: () => string
 }
@@ -18,7 +18,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   session: null,
   isConnected: false,
 
-  connect: (lobbyId: string, userId: string, displayName: string) => {
+  connect: (lobbyId: string, userId: string, displayName: string, avatarUrl?: string) => {
     if (get().socket) {
       get().socket?.close()
     }
@@ -29,7 +29,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       room: lobbyId,
       query: {
         userId,
-        displayName
+        displayName,
+        avatarUrl: avatarUrl || ''
       }
     })
 

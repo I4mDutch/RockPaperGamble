@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
 import { Coins, Flame, Timer, CheckCircle2 } from 'lucide-react'
+import { Avatar } from '../common/Avatar'
 
 export const BettingPhase = () => {
   const { session, socket } = useGameStore()
@@ -40,11 +41,7 @@ export const BettingPhase = () => {
         <div className="flex items-center justify-center gap-8 text-white">
           <div className="text-right group">
             <div className="relative mb-4">
-              <img
-                src={challenger.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${challenger.displayName}`}
-                alt=""
-                className={`w-32 h-32 rounded-3xl bg-slate-700 shadow-2xl transition-all ${isChallenger ? 'ring-4 ring-brand-primary ring-offset-8 ring-offset-slate-900' : ''}`}
-              />
+              <Avatar url={challenger.avatarUrl} name={challenger.displayName} size="2xl" className={isChallenger ? 'ring-4 ring-brand-primary ring-offset-8 ring-offset-slate-900' : ''} />
               {isChallenger && (
                 <div className="absolute -top-3 -right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-widest shadow-xl">YOU</div>
               )}
@@ -65,11 +62,7 @@ export const BettingPhase = () => {
 
           <div className="text-left group">
             <div className="relative mb-4">
-              <img
-                src={challengee.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${challengee.displayName}`}
-                alt=""
-                className={`w-32 h-32 rounded-3xl bg-slate-700 shadow-2xl transition-all ${isChallengee ? 'ring-4 ring-brand-accent ring-offset-8 ring-offset-slate-900' : ''}`}
-              />
+              <Avatar url={challengee.avatarUrl} name={challengee.displayName} size="2xl" className={isChallengee ? 'ring-4 ring-brand-accent ring-offset-8 ring-offset-slate-900' : ''} />
               {isChallengee && (
                 <div className="absolute -top-3 -left-3 bg-brand-accent text-slate-900 text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-widest shadow-xl">YOU</div>
               )}

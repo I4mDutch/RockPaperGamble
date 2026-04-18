@@ -1,6 +1,7 @@
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
 import { Coins, Timer } from 'lucide-react'
+import { Avatar } from '../common/Avatar'
 
 export const ResultsPhase = () => {
   const { session } = useGameStore()
@@ -51,11 +52,7 @@ export const ResultsPhase = () => {
                 <div className="relative z-10 flex items-center gap-6">
                   <div className="relative">
                     <div className={`absolute -inset-1 rounded-2xl blur-sm opacity-50 ${isMe ? 'bg-brand-accent' : 'bg-transparent'}`} />
-                    <img
-                      src={player.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.displayName}`}
-                      alt=""
-                      className="relative w-20 h-20 rounded-2xl bg-slate-700 border border-white/10"
-                    />
+                    <Avatar url={player.avatarUrl} name={player.displayName} size="xl" className="relative border border-white/10" />
                     <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-black text-slate-500">
                       #{idx + 1}
                     </div>

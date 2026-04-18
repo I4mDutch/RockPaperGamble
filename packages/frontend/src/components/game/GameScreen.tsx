@@ -4,6 +4,7 @@ import { BettingPhase } from './BettingPhase'
 import { RPSDuel } from './RPSDuel'
 import { ResultsPhase } from './ResultsPhase'
 import { Trophy, TrendingUp } from 'lucide-react'
+import { Avatar } from '../common/Avatar'
 
 export const GameScreen = () => {
   const { session } = useGameStore()
@@ -43,11 +44,7 @@ export const GameScreen = () => {
             {session.players.sort((a, b) => b.coins - a.coins).map((player, idx) => (
               <div key={player.id} className="flex items-center gap-3">
                 <span className="text-xs font-black text-slate-600 w-4">{idx + 1}</span>
-                <img
-                  src={player.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.displayName}`}
-                  className="w-8 h-8 rounded-lg bg-slate-700"
-                  alt=""
-                />
+                <Avatar url={player.avatarUrl} name={player.displayName} size="sm" />
                 <span className="flex-1 text-sm font-bold text-white truncate">{player.displayName}</span>
                 <span className="text-sm font-black text-brand-accent">{player.coins.toLocaleString()}</span>
               </div>

@@ -1,6 +1,7 @@
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
 import { Swords, Target, Timer } from 'lucide-react'
+import { Avatar } from '../common/Avatar'
 
 export const ChallengeSelector = () => {
   const { session, socket } = useGameStore()
@@ -55,11 +56,7 @@ export const ChallengeSelector = () => {
           >
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
-                <img
-                  src={player.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.displayName}`}
-                  alt={player.displayName}
-                  className="w-20 h-20 rounded-2xl bg-slate-700"
-                />
+                <Avatar url={player.avatarUrl} name={player.displayName} size="xl" />
                 <div className="absolute -bottom-2 -right-2 bg-brand-accent text-slate-900 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase">
                   {player.coins.toLocaleString()} 🪙
                 </div>

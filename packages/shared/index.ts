@@ -12,6 +12,7 @@ export interface Player {
     losses: number;
     totalWagered: number;
     totalEarned: number;
+    winStreak: number;
   };
 }
 
@@ -37,6 +38,8 @@ export interface Duel {
   challengerId: string;
   challengeeId: string;
   rounds: RPSRound[];
+  seriesScore: Record<string, number>;
+  targetWins: number;
   winnerId?: string;
   status: "pending" | "betting" | "active" | "finished";
   bets: Bet[];

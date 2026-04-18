@@ -1,36 +1,49 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 export const supabase = (supabaseUrl && supabaseKey) 
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
-export async function getPlayerCoins(userId: string): Promise<number> {
-  if (!supabase) return 1000; // Default starting coins
+export async function getPlayerStats(userId: string): Promise<{ coins: number; winStreak: number; avatarUrl?: string }> {
+  if (!supabase) return { coins: 1000, winStreak: 0 };
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('coins')
+    .select('coins, win_streak, avatar_url')
     .eq('id', userId)
     .single();
 
   if (error || !data) {
-    // If player doesn't exist, create them
-    await supabase.from('profiles').insert({ id: userId, coins: 1000 });
-    return 1000;
+    try {
+      const defaultStats = { id: userId, coins: 1000, win_streak: 0 };
+      await supabase.from('profiles').upsert(defaultStats);
+    } catch (e) {
+      console.error("Failed to upsert default stats:", e);
+    }
+    return { coins: 1000, winStreak: 0 };
   }
 
-  return data.coins;
+  return { 
+    coins: data.coins, 
+    winStreak: data.win_streak || 0,
+    avatarUrl: data.avatar_url 
+  };
 }
 
-export async function updatePlayerCoins(userId: string, coins: number) {
+export async function updatePlayerProfile(userId: string, stats: { coins?: number; winStreak?: number; avatarUrl?: string }) {
   if (!supabase) return;
+
+  const updateData: any = {};
+  if (stats.coins !== undefined) updateData.coins = stats.coins;
+  if (stats.winStreak !== undefined) updateData.win_streak = stats.winStreak;
+  if (stats.avatarUrl !== undefined) updateData.avatar_url = stats.avatarUrl;
 
   await supabase
     .from('profiles')
-    .update({ coins })
+    .update(updateData)
     .eq('id', userId);
 }
 

@@ -54,11 +54,17 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
                 className="flex items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-white/5"
               >
                 <div className="relative">
-                  <img
-                    src={player.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.displayName}`}
-                    alt={player.displayName}
-                    className="w-12 h-12 rounded-xl bg-slate-700"
-                  />
+                  <div className="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center overflow-hidden border border-white/5">
+                    {player.avatarUrl && !player.avatarUrl.startsWith('http') ? (
+                      <span className="text-2xl">{player.avatarUrl}</span>
+                    ) : (
+                      <img
+                        src={player.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.displayName}`}
+                        alt={player.displayName}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                   {session.hostId === player.id && (
                     <div className="absolute -top-2 -right-2 bg-brand-accent text-slate-900 p-1 rounded-lg">
                       <Shield size={12} fill="currentColor" />
@@ -66,7 +72,14 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold truncate">{player.displayName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-bold truncate">{player.displayName}</p>
+                    {player.stats.winStreak > 0 && (
+                      <div className="flex items-center gap-1 bg-orange-500/20 px-2 py-0.5 rounded-full border border-orange-500/30">
+                        <span className="text-[10px] font-black text-orange-500 uppercase">🔥 {player.stats.winStreak}</span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 font-medium">Ready to Gamble</p>
                 </div>
                 <div className="text-brand-accent font-black">
@@ -84,15 +97,15 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-400">Mode</span>
-                <span className="text-white font-bold">Standard</span>
+                <span className="text-brand-primary font-bold">Series (First to 3)</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-400">Starting Coins</span>
                 <span className="text-white font-bold">1,000</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-400">Rounds</span>
-                <span className="text-white font-bold">Unlimited</span>
+                <span className="text-slate-400">Betting</span>
+                <span className="text-white font-bold">Match Winner</span>
               </div>
             </div>
 

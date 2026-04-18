@@ -12,9 +12,10 @@ interface AuthState {
   setSession: (session: Session | null) => void
   signOut: () => Promise<void>
   initialize: () => Promise<void>
+  updateProfile: (updates: { displayName?: string; avatarUrl?: string }) => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   guestUser: null,
   session: null,
@@ -30,6 +31,29 @@ export const useAuthStore = create<AuthState>((set) => ({
     await supabase.auth.signOut()
     localStorage.removeItem('rpg_guest')
     set({ user: null, session: null, guestUser: null, loading: false })
+  },
+  updateProfile: async (updates) => {
+    const { user, guestUser } = get()
+    
+    if (user) {
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          full_name: updates.displayName ?? user.user_metadata.full_name,
+          avatar_url: updates.avatarUrl ?? user.user_metadata.avatar_url
+        }
+      })
+      if (!error && data.user) {
+        set({ user: data.user })
+      }
+    } else if (guestUser) {
+      const newGuest = {
+        ...guestUser,
+        displayName: updates.displayName ?? guestUser.displayName,
+        avatarUrl: updates.avatarUrl
+      }
+      localStorage.setItem('rpg_guest', JSON.stringify(newGuest))
+      set({ guestUser: newGuest })
+    }
   },
   initialize: async () => {
     // 1. Get initial session
