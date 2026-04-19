@@ -97,10 +97,14 @@ function GameContent() {
               >
                 ✕
               </button>
-              <h4 className="font-black italic text-brand-primary mb-1">ROCK PAPER GAMBLE V2.0.0</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Now featuring **Best-of-5** series matches! Get to 3 wins first to take home the pot.
-              </p>
+              <h4 className="font-black italic text-brand-primary mb-2">ROCK PAPER GAMBLE V2.1.0</h4>
+              <ul className="text-xs text-slate-400 leading-relaxed space-y-1 list-disc list-inside">
+                <li>Best-of-5 series matches</li>
+                <li>Prize pool betting for all players</li>
+                <li>Gift coins to other players</li>
+                <li>$0 players are eliminated</li>
+                <li>Discord sign-in & profile customization</li>
+              </ul>
             </div>
           </div>
         )}
