@@ -130,7 +130,7 @@ export const BettingPhase = () => {
                 >
                   <div className="relative z-10 flex items-center justify-center gap-3 text-xl italic tracking-tighter">
                     <Flame size={24} />
-                    <span>BET ON {isChallenger ? 'MYSELF' : challenger.displayName.toUpperCase()}</span>
+                    <span>{isChallenger ? 'WAGER' : `BET ON ${challenger.displayName.toUpperCase()}`}</span>
                   </div>
                   <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 </button>
@@ -143,7 +143,7 @@ export const BettingPhase = () => {
                 >
                   <div className="relative z-10 flex items-center justify-center gap-3 text-xl italic tracking-tighter">
                     <Flame size={24} />
-                    <span>BET ON {isChallengee ? 'MYSELF' : challengee.displayName.toUpperCase()}</span>
+                    <span>{isChallengee ? 'WAGER' : `BET ON ${challengee.displayName.toUpperCase()}`}</span>
                   </div>
                   <div className="absolute inset-0 bg-black/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 </button>

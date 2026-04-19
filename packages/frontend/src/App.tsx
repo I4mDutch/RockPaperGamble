@@ -97,8 +97,9 @@ function GameContent() {
               >
                 ✕
               </button>
-              <h4 className="font-black italic text-brand-primary mb-2">ROCK PAPER GAMBLE V2.1.0</h4>
+              <h4 className="font-black italic text-brand-primary mb-2">ROCK PAPER GAMBLE V2.1.1</h4>
               <ul className="text-xs text-slate-400 leading-relaxed space-y-1 list-disc list-inside">
+                <li>Changed "BET ON MYSELF" to "WAGER"</li>
                 <li>Best-of-5 series matches</li>
                 <li>Prize pool betting for all players</li>
                 <li>Gift coins to other players</li>
