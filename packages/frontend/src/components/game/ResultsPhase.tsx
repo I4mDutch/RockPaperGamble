@@ -2,10 +2,14 @@ import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
 import { Coins, Timer } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
+import { useCoinAnimation } from './CoinAnimation'
+import { useEffect, useRef } from 'react'
 
 export const ResultsPhase = () => {
   const { session } = useGameStore()
   const { user, guestUser } = useAuthStore()
+  const { CoinAnimationComponent, triggerAnimation } = useCoinAnimation()
+  const hasTriggeredRef = useRef(false)
 
   if (!session) return null
 
@@ -13,9 +17,22 @@ export const ResultsPhase = () => {
   const winnerId = session.currentDuel?.winnerId
   const isTie = winnerId === 'draw'
   
+  // Calculate user's payout for coin animation
+  const myBet = session.currentDuel?.bets.find(b => b.playerId === userId)
+  const myPayout = myBet?.payout || 0
+
+  // Trigger coin animation when player wins (only once)
+  useEffect(() => {
+    if (myPayout > 0 && !hasTriggeredRef.current) {
+      hasTriggeredRef.current = true
+      triggerAnimation(myPayout)
+    }
+  }, [myPayout, triggerAnimation])
+  
   return (
     <>
       <style>{styles}</style>
+      {CoinAnimationComponent}
       <div className="w-full max-w-4xl space-y-12 animate-in zoom-in fade-in duration-700">
         <div className="text-center space-y-6">
           <div className={`inline-block px-6 py-2 rounded-full border animate-bounce ${isTie ? 'bg-slate-500/20 border-slate-500/30' : 'bg-brand-accent/20 border-brand-accent/30'}`}>

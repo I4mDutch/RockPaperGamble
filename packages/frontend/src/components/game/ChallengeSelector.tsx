@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
-import { Swords, Target, Timer, Coins, Gift, Ban } from 'lucide-react'
+import { Swords, Target, Timer, Coins, Gift, Ban, X } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 
 export const ChallengeSelector = () => {
@@ -9,6 +9,7 @@ export const ChallengeSelector = () => {
   const { user, guestUser } = useAuthStore()
   const [giftTarget, setGiftTarget] = useState<string | null>(null)
   const [giftAmount, setGiftAmount] = useState(100)
+  const [showGiftMenu, setShowGiftMenu] = useState<string | null>(null)
 
   if (!session) return null
 
@@ -160,15 +161,70 @@ export const ChallengeSelector = () => {
                 )}
               </button>
 
-              {/* Gift button — visible for anyone with coins */}
+              {/* Gift button — visible on tap (mobile-friendly) */}
               {!isBroke && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setGiftTarget(player.id); }}
-                  className="absolute top-3 left-3 p-2 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded-xl transition-all opacity-0 group-hover:opacity-100 border border-emerald-500/20"
-                  title="Gift coins"
-                >
-                  <Gift size={16} />
-                </button>
+                <>
+                  <button
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      // Toggle gift menu
+                      if (showGiftMenu === player.id) {
+                        setShowGiftMenu(null);
+                      } else {
+                        setShowGiftMenu(player.id);
+                      }
+                    }}
+                    className={`
+                      absolute top-3 left-3 p-2 rounded-xl transition-all border
+                      ${showGiftMenu === player.id 
+                        ? 'bg-emerald-500 text-white border-emerald-500' 
+                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/40'}
+                      sm:opacity-0 sm:group-hover:opacity-100
+                    `}
+                    title="Gift coins"
+                  >
+                    {showGiftMenu === player.id ? <X size={16} /> : <Gift size={16} />}
+                  </button>
+                  
+                  {/* Gift Menu Popover */}
+                  {showGiftMenu === player.id && (
+                    <div className="absolute top-12 left-0 z-10 bg-slate-800 border border-white/10 rounded-xl p-3 shadow-xl w-48 animate-in fade-in zoom-in-95 duration-200">
+                      <p className="text-xs text-slate-400 mb-2">Gift to {player.displayName}</p>
+                      <div className="flex items-center gap-2 mb-3">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setGiftAmount(Math.max(10, giftAmount - 50)); }}
+                          className="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm"
+                        >-</button>
+                        <div className="flex-1 bg-slate-900 rounded-lg px-2 py-1 text-center">
+                          <span className="text-white font-bold text-sm">{giftAmount}</span>
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setGiftAmount(Math.min(currentPlayer?.coins || 0, giftAmount + 50)); }}
+                          className="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm"
+                        >+</button>
+                      </div>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (giftAmount > 0 && giftAmount <= (currentPlayer?.coins || 0)) {
+                            socket?.send(JSON.stringify({
+                              type: 'GIFT_COINS',
+                              targetId: player.id,
+                              amount: giftAmount
+                            }));
+                            setShowGiftMenu(null);
+                            setGiftAmount(100);
+                          }
+                        }}
+                        disabled={giftAmount <= 0 || giftAmount > (currentPlayer?.coins || 0)}
+                        className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white font-bold rounded-lg text-sm transition-colors"
+                      >
+                        Send {giftAmount} 🪙
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )

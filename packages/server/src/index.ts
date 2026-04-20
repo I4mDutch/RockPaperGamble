@@ -1,6 +1,13 @@
 import type * as Party from "partykit/server";
-import { GameSession, Player, GamePhase, RPSChoice, Duel, RPSRound, Bet } from "@rpg/shared";
+import { GameSession, Player, GamePhase, RPSChoice, Duel, RPSRound, Bet, GameSettings, RoundHistory, GameEvent, getBalanceModifiers, getAvatarColor, getInitials } from "@rpg/shared";
 import { getPlayerStats, updatePlayerProfile } from './db';
+
+const DEFAULT_SETTINGS: GameSettings = {
+  startingMoney: 10000,
+  lossModifier: 0,
+  winModifier: 0,
+  highStakesMode: false,
+};
 
 export default class Server implements Party.Server {
   session: GameSession;
@@ -19,57 +26,90 @@ export default class Server implements Party.Server {
       createdAt: Date.now(),
       currentDuelId: null,
       timeLeft: 0,
+      settings: { ...DEFAULT_SETTINGS },
+      roundHistory: [],
+      eventFeed: [],
     };
 
     // Start the global timer loop
     setInterval(() => this.tick(), 1000);
+    console.log(`[INIT] Server started for room: ${room.id}`);
+  }
+
+  // Force everyone into sync
+  broadcastSync() {
+    // Ensure turnOrder is always synced before broadcasting in lobby
+    if (this.session.status === "lobby") {
+      this.syncTurnOrder();
+    }
+    this.room.broadcast(JSON.stringify({
+      type: "SYNC",
+      session: this.session
+    }));
+  }
+
+  // Sync turnOrder with player list
+  syncTurnOrder() {
+    if (this.session.status !== "lobby") return;
+    
+    const playerIds = this.session.players.map(p => p.id);
+    
+    // Ensure turnOrder is a fresh array
+    let newOrder = Array.isArray(this.session.turnOrder) 
+      ? [...this.session.turnOrder].filter(id => playerIds.includes(id))
+      : [];
+    
+    // Append any missing players
+    playerIds.forEach(id => {
+      if (!newOrder.includes(id)) {
+        newOrder.push(id);
+      }
+    });
+    
+    // Remove any players no longer in the game
+    newOrder = newOrder.filter(id => playerIds.includes(id));
+    
+    this.session.turnOrder = newOrder;
+    console.log(`[SYNC] turnOrder: ${JSON.stringify(this.session.turnOrder)}`);
+  }
+
+  // Add event to feed
+  addEvent(event: Omit<GameEvent, 'id' | 'timestamp'>) {
+    const newEvent: GameEvent = {
+      ...event,
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now(),
+    };
+    this.session.eventFeed.push(newEvent);
+    if (this.session.eventFeed.length > 50) this.session.eventFeed = this.session.eventFeed.slice(-50);
   }
 
   tick() {
     if (this.session.status !== "in_progress") return;
     if (this.session.timeLeft > 0) {
       this.session.timeLeft--;
-      if (this.session.timeLeft === 0) {
-        this.handlePhaseTimeout();
-      }
+      if (this.session.timeLeft === 0) this.handlePhaseTimeout();
       this.broadcastSync();
     }
   }
 
   handlePhaseTimeout() {
     switch (this.session.phase) {
-      case "BETTING":
-        this.startRPSRound();
-        break;
-      case "RPS_ROUND":
-        this.handleRPSRoundTimeout();
-        break;
-      case "RESULTS":
-        this.startNewRound();
-        break;
+      case "BETTING": this.startRPSRound(); break;
+      case "RPS_ROUND": this.handleRPSRoundTimeout(); break;
+      case "RESULTS": this.startNewRound(); break;
     }
   }
 
   handleRPSRoundTimeout() {
     if (!this.currentDuel) return;
-    
     const lastRound = this.currentDuel.rounds[this.currentDuel.rounds.length - 1];
-    
-    // If the round was already resolved (we were just showing the 5s result overlay)
     if (lastRound && lastRound.winner) {
-      // Start next round in series
       this.session.timeLeft = 15;
-      this.currentDuel.rounds.push({
-        roundNumber: this.currentDuel.rounds.length + 1,
-        winner: undefined
-      });
-    } else {
-      // The 20s timer actually ran out without both players picking
-      // For now, let's just force a tie to keep the game moving
-      if (lastRound) {
-        lastRound.winner = "tie";
-        this.session.timeLeft = 3; // Show "TIE" result for 3 seconds
-      }
+      this.currentDuel.rounds.push({ roundNumber: this.currentDuel.rounds.length + 1, winner: undefined });
+    } else if (lastRound) {
+      lastRound.winner = "tie";
+      this.session.timeLeft = 3;
     }
     this.broadcastSync();
   }
@@ -84,357 +124,248 @@ export default class Server implements Party.Server {
     const query = new URL(ctx.request.url).searchParams;
     const userId = query.get("userId");
     const displayName = query.get("displayName") || "Unknown Player";
+    if (!userId) { conn.close(); return; }
 
-    if (!userId) {
-      conn.close();
-      return;
-    }
-
-    // Store the userId on the connection state for easy access in onMessage
     conn.setState({ userId });
+    console.log(`[CONNECT] User: ${userId} (${displayName})`);
 
-    if (!this.session.hostId) {
-      this.session.hostId = userId;
-    }
+    if (!this.session.hostId) this.session.hostId = userId;
 
     try {
-      const queryAvatarUrl = query.get("avatarUrl") || undefined;
-      const { coins, winStreak, avatarUrl: dbAvatarUrl } = await getPlayerStats(userId, { 
-        displayName, 
-        avatarUrl: queryAvatarUrl 
-      });
-      const avatarUrl = dbAvatarUrl || queryAvatarUrl;
+      const avatarUrlQuery = query.get("avatarUrl") || undefined;
+      const stats = await getPlayerStats(userId, { displayName, avatarUrl: avatarUrlQuery });
+      
+      const avatarUrl = stats.avatarUrl || avatarUrlQuery;
+      const avatarColor = getAvatarColor(userId);
+      const initials = getInitials(displayName);
+      const startMoney = this.session.settings?.startingMoney || DEFAULT_SETTINGS.startingMoney;
 
-      const existingPlayer = this.session.players.find((p) => p.id === userId);
-      if (!existingPlayer) {
-        const newPlayer: Player = {
-          id: userId,
-          displayName: displayName,
-          avatarUrl: avatarUrl,
-          coins: coins,
-          isConnected: true,
-          role: "spectator",
-          stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: winStreak },
-        };
-        this.session.players.push(newPlayer);
+      const pIdx = this.session.players.findIndex(p => p.id === userId);
+      const pData: Player = {
+        id: userId, displayName, avatarUrl, avatarColor, initials,
+        coins: startMoney, isConnected: true, role: "spectator",
+        status: "not_ready", // Explicit default
+        stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: stats.winStreak || 0, totalWon: 0, totalLost: 0 }
+      };
+
+      if (pIdx === -1) {
+        console.log(`[JOIN] Adding player ${userId}`);
+        this.session.players.push(pData);
+        this.addEvent({ type: "join", playerId: userId, playerName: displayName, message: `${displayName} joined` });
       } else {
-        existingPlayer.isConnected = true;
-        existingPlayer.displayName = displayName;
-        existingPlayer.avatarUrl = avatarUrl;
-        existingPlayer.coins = coins;
-        // Ensure stats object exists before updating winStreak
-        if (!existingPlayer.stats) {
-          existingPlayer.stats = { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: 0 };
-        }
-        existingPlayer.stats.winStreak = winStreak;
+        console.log(`[RECONN] Updating player ${userId}`);
+        const existing = this.session.players[pIdx];
+        this.session.players[pIdx] = {
+          ...pData,
+          coins: existing.coins ?? pData.coins,
+          status: (existing.status === "ready" || existing.status === "not_ready") ? existing.status : "not_ready",
+          stats: { 
+            ...pData.stats, 
+            ...(existing.stats || {}), 
+            winStreak: Math.max(stats.winStreak || 0, existing.stats?.winStreak || 0) 
+          }
+        };
       }
+      this.syncTurnOrder();
     } catch (err) {
-      console.error("Error in onConnect:", err);
-      // Fallback for safety to prevent connection drop
+      console.error("[ERR] onConnect:", err);
+      // Failsafe
       if (!this.session.players.find(p => p.id === userId)) {
         this.session.players.push({
-          id: userId,
-          displayName,
-          coins: 1000,
-          isConnected: true,
-          role: "spectator",
-          stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: 0 }
+          id: userId, displayName, avatarColor: getAvatarColor(userId), initials: getInitials(displayName),
+          coins: DEFAULT_SETTINGS.startingMoney, isConnected: true, role: "spectator", status: "not_ready",
+          stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: 0, totalWon: 0, totalLost: 0 }
         });
+        this.syncTurnOrder();
       }
     }
+    this.broadcastSync();
+  }
 
+  onClose(conn: Party.Connection) {
+    const userId = conn.state?.userId;
+    if (!userId) return;
+    const player = this.session.players.find(p => p.id === userId);
+    if (player) {
+      player.isConnected = false;
+      if (this.session.status === "lobby") {
+        this.session.players = this.session.players.filter(p => p.id !== userId);
+        this.syncTurnOrder();
+        if (this.session.hostId === userId && this.session.players.length > 0) this.session.hostId = this.session.players[0].id;
+      }
+      this.addEvent({ type: "leave", playerId: userId, playerName: player.displayName, message: `${player.displayName} left` });
+    }
     this.broadcastSync();
   }
 
   onMessage(message: string, sender: Party.Connection) {
     const msg = JSON.parse(message);
     const userId = sender.state?.userId;
-
     if (!userId) return;
 
     switch (msg.type) {
-      case "START_GAME":
-        this.handleStartGame(userId);
-        break;
-      case "SELECT_CHALLENGER":
-        this.handleSelectChallenger(userId, msg.targetId, msg.amount);
-        break;
-      case "PLACE_BET":
-        this.handlePlaceBet(userId, msg.targetId, msg.amount);
-        break;
-      case "LOCK_CHOICE":
-        this.handleLockChoice(userId, msg.choice);
-        break;
-      case "UPDATE_PROFILE":
-        this.handleUpdateProfile(userId, msg.displayName, msg.avatarUrl);
-        break;
-      case "GIFT_COINS":
-        this.handleGiftCoins(userId, msg.targetId, msg.amount);
-        break;
+      case "START_GAME": this.handleStartGame(userId); break;
+      case "SELECT_CHALLENGER": this.handleSelectChallenger(userId, msg.targetId, msg.amount); break;
+      case "PLACE_BET": this.handlePlaceBet(userId, msg.targetId, msg.amount); break;
+      case "LOCK_CHOICE": this.handleLockChoice(userId, msg.choice); break;
+      case "UPDATE_PROFILE": this.handleUpdateProfile(userId, msg.displayName, msg.avatarUrl); break;
+      case "GIFT_COINS": this.handleGiftCoins(userId, msg.targetId, msg.amount); break;
+      case "UPDATE_SETTINGS": this.handleUpdateSettings(userId, msg.settings); break;
+      case "REORDER_PLAYERS": this.handleReorderPlayers(userId, msg.turnOrder); break;
+      case "SET_READY": this.handleSetReady(userId, msg.ready); break;
+      case "FORCE_SYNC": this.syncTurnOrder(); this.broadcastSync(); break;
+    }
+  }
+
+  handleUpdateSettings(userId: string, settings: Partial<GameSettings>) {
+    if (this.session.hostId !== userId || this.session.status !== "lobby") return;
+    if (settings.startingMoney !== undefined) {
+      const mod = getBalanceModifiers(settings.startingMoney);
+      this.session.settings = { ...this.session.settings, startingMoney: settings.startingMoney, lossModifier: mod.loss, winModifier: mod.win, highStakesMode: mod.highStakes };
+    }
+    this.broadcastSync();
+  }
+
+  handleReorderPlayers(userId: string, newTurnOrder: string[]) {
+    console.log(`[REORDER] Request from ${userId}`);
+    if (this.session.hostId !== userId || this.session.status !== "lobby") return;
+    const curIds = this.session.players.map(p => p.id).sort();
+    const newIds = [...newTurnOrder].sort();
+    if (JSON.stringify(curIds) === JSON.stringify(newIds)) {
+      this.session.turnOrder = [...newTurnOrder];
+      console.log(`[REORDER] Success: ${JSON.stringify(this.session.turnOrder)}`);
+    } else {
+      console.warn(`[REORDER] Fail: Mismatch. Cur: ${curIds}, New: ${newIds}`);
+      this.syncTurnOrder();
+    }
+    this.broadcastSync();
+  }
+
+  handleSetReady(userId: string, ready: boolean) {
+    const idx = this.session.players.findIndex(p => p.id === userId);
+    if (idx !== -1) {
+      this.session.players[idx] = { ...this.session.players[idx], status: ready ? "ready" : "not_ready" };
+      console.log(`[READY] ${this.session.players[idx].displayName} is now ${this.session.players[idx].status}`);
+      this.addEvent({ type: "ready", playerId: userId, playerName: this.session.players[idx].displayName, message: `${this.session.players[idx].displayName} is ${ready ? 'ready' : 'not ready'}` });
+      this.broadcastSync();
     }
   }
 
   async handleUpdateProfile(userId: string, displayName: string, avatarUrl: string) {
     const player = this.session.players.find(p => p.id === userId);
     if (player) {
-      player.displayName = displayName;
-      player.avatarUrl = avatarUrl;
+      player.displayName = displayName; player.avatarUrl = avatarUrl;
       this.broadcastSync();
-      
-      // Persist the changes to the database
-      try {
-        await updatePlayerProfile(userId, { displayName, avatarUrl } as any);
-      } catch (err) {
-        console.error("Failed to persist profile update:", err);
-      }
+      try { await updatePlayerProfile(userId, { displayName, avatarUrl } as any); } catch (err) { console.error("[ERR] Profile:", err); }
     }
   }
 
   handleStartGame(userId: string) {
     if (this.session.hostId !== userId) return;
-    this.session.status = "in_progress";
-    this.session.turnOrder = this.session.players.map(p => p.id);
-    this.startNewRound();
+    if (!this.session.players.every(p => p.status === "ready") || this.session.players.length < 2) return;
+    this.addEvent({ type: "start", playerId: userId, message: "Match starting!" });
+    this.session.countdown = 3;
+    this.broadcastSync();
+    const int = setInterval(() => {
+      if (this.session.countdown && this.session.countdown > 1) { this.session.countdown--; this.broadcastSync(); }
+      else { clearInterval(int); this.session.countdown = undefined; this.session.status = "in_progress"; this.startNewRound(); }
+    }, 1000);
   }
 
   startNewRound() {
-    this.session.roundNumber++;
-    this.session.phase = "CHALLENGE_SELECT";
-    this.session.timeLeft = 10;
-
-    // Skip broke players in turn order
+    this.session.roundNumber++; this.session.phase = "CHALLENGE_SELECT"; this.session.timeLeft = 10;
     let attempts = 0;
     while (attempts < this.session.turnOrder.length) {
-      const candidateId = this.session.turnOrder[this.session.activePlayerIndex];
-      const candidate = this.session.players.find(p => p.id === candidateId);
-      if (candidate && candidate.coins > 0) break;
+      const cId = this.session.turnOrder[this.session.activePlayerIndex];
+      const c = this.session.players.find(p => p.id === cId);
+      if (c && c.coins > 0) break;
       this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
       attempts++;
     }
-
-    this.session.players.forEach(p => {
-      p.role = p.id === this.session.turnOrder[this.session.activePlayerIndex] ? "challenger" : "spectator";
-    });
+    this.session.players.forEach(p => { p.role = p.id === this.session.turnOrder[this.session.activePlayerIndex] ? "challenger" : "spectator"; });
     this.currentDuel = null;
     this.broadcastSync();
   }
 
-  handleGiftCoins(senderId: string, targetId: string, amount: number) {
-    if (!amount || amount <= 0) return;
-    const sender = this.session.players.find(p => p.id === senderId);
-    const receiver = this.session.players.find(p => p.id === targetId);
-    if (!sender || !receiver || sender.id === receiver.id) return;
-    if (sender.coins < amount) return;
-
-    sender.coins -= amount;
-    receiver.coins += amount;
-    updatePlayerProfile(sender.id, { coins: sender.coins });
-    updatePlayerProfile(receiver.id, { coins: receiver.coins });
+  handleGiftCoins(sId: string, tId: string, amt: number) {
+    if (!amt || amt <= 0) return;
+    const s = this.session.players.find(p => p.id === sId);
+    const r = this.session.players.find(p => p.id === tId);
+    if (!s || !r || s.id === r.id || s.coins < amt) return;
+    s.coins -= amt; r.coins += amt;
+    updatePlayerProfile(s.id, { coins: s.coins }); updatePlayerProfile(r.id, { coins: r.coins });
+    this.addEvent({ type: "gift", playerId: sId, playerName: s.displayName, targetId: tId, targetName: r.displayName, amount: amt, message: `${s.displayName} gifted ${amt.toLocaleString()} coins` });
     this.broadcastSync();
   }
 
-  handleSelectChallenger(userId: string, targetId: string, amount: number = 0) {
+  handleSelectChallenger(uId: string, tId: string, amt: number = 0) {
     if (this.session.phase !== "CHALLENGE_SELECT") return;
-    const challenger = this.session.players.find(p => p.id === userId);
-    if (!challenger || challenger.role !== "challenger") return;
-    if (challenger.coins <= 0) return; // broke players can't challenge
-
-    const challengee = this.session.players.find(p => p.id === targetId);
-    if (!challengee) return;
-    if (challengee.coins <= 0) return; // broke players can't be challenged
-
-    // Both players must be able to afford the bet
-    const wager = Math.min(amount, challenger.coins, challengee.coins);
-
-    challengee.role = "challengee";
-    this.session.phase = "BETTING";
-    this.session.timeLeft = 28;
-    
-    // Deduct wagers
-    if (wager > 0) {
-      challenger.coins -= wager;
-      challengee.coins -= wager;
-      updatePlayerProfile(challenger.id, { coins: challenger.coins });
-      updatePlayerProfile(challengee.id, { coins: challengee.coins });
-    }
-
-    const duelId = `duel_${Date.now()}`;
-    this.session.currentDuelId = duelId;
-    this.session.currentDuel = {
-      id: duelId,
-      challengerId: userId,
-      challengeeId: targetId,
-      rounds: [],
-      seriesScore: {
-        [userId]: 0,
-        [targetId]: 0
-      },
-      targetWins: 3,
-      bets: wager > 0 ? [
-        // Represent the match wagers as bets so they go into the total prize pool
-        {
-          playerId: challenger.id,
-          targetId: challenger.id, // bet on themselves
-          amount: wager,
-          placedAt: Date.now(),
-          locked: true,
-          payout: 0
-        },
-        {
-          playerId: challengee.id,
-          targetId: challengee.id, // bet on themselves
-          amount: wager,
-          placedAt: Date.now(),
-          locked: true,
-          payout: 0
-        }
-      ] : [],
-      status: "active",
-      startedAt: Date.now()
-    };
+    const c1 = this.session.players.find(p => p.id === uId);
+    const c2 = this.session.players.find(p => p.id === tId);
+    if (!c1 || c1.role !== "challenger" || c1.coins <= 0 || !c2 || c2.coins <= 0) return;
+    const w = Math.min(amt, c1.coins, c2.coins);
+    c2.role = "challengee"; this.session.phase = "BETTING"; this.session.timeLeft = 28;
+    if (w > 0) { c1.coins -= w; c2.coins -= w; updatePlayerProfile(c1.id, { coins: c1.coins }); updatePlayerProfile(c2.id, { coins: c2.coins }); }
+    const dId = `duel_${Date.now()}`; this.session.currentDuelId = dId;
+    this.session.currentDuel = { id: dId, challengerId: uId, challengeeId: tId, rounds: [], seriesScore: { [uId]: 0, [tId]: 0 }, targetWins: 3, bets: w > 0 ? [{ playerId: uId, targetId: uId, amount: w, placedAt: Date.now(), locked: true, payout: 0 }, { playerId: tId, targetId: tId, amount: w, placedAt: Date.now(), locked: true, payout: 0 }] : [], status: "active", startedAt: Date.now() };
     this.currentDuel = this.session.currentDuel;
-    
     this.broadcastSync();
   }
 
-  handlePlaceBet(userId: string, targetId: string, amount: number) {
+  handlePlaceBet(uId: string, tId: string, amt: number) {
     if (this.session.phase !== "BETTING" || !this.currentDuel) return;
-    const player = this.session.players.find(p => p.id === userId);
-    if (!player || player.coins < amount) return;
-    
-    const existingBet = this.currentDuel.bets.find(b => b.playerId === userId);
-    if (existingBet) return;
-    
-    player.coins -= amount;
-    updatePlayerProfile(userId, { coins: player.coins });
-    this.currentDuel.bets.push({
-      playerId: userId,
-      targetId,
-      amount,
-      placedAt: Date.now(),
-      locked: true,
-      payout: 0
-    });
-    
+    const p = this.session.players.find(pl => pl.id === uId);
+    if (!p || p.coins < amt || this.currentDuel.bets.find(b => b.playerId === uId)) return;
+    p.coins -= amt; updatePlayerProfile(uId, { coins: p.coins });
+    this.currentDuel.bets.push({ playerId: uId, targetId: tId, amount: amt, placedAt: Date.now(), locked: true, payout: 0 });
+    p.stats.totalWagered += amt;
+    this.addEvent({ type: "bet", playerId: uId, playerName: p.displayName, targetId: tId, targetName: this.session.players.find(pl => pl.id === tId)?.displayName, amount: amt, message: `${p.displayName} bet ${amt.toLocaleString()}` });
     this.broadcastSync();
   }
 
-  handleLockChoice(userId: string, choice: RPSChoice) {
+  handleLockChoice(uId: string, choice: RPSChoice) {
     if (this.session.phase !== "RPS_ROUND" || !this.currentDuel) return;
-    
-    let currentRound = this.currentDuel.rounds[this.currentDuel.rounds.length - 1];
-    if (!currentRound || currentRound.winner) {
-      currentRound = {
-        roundNumber: (this.currentDuel.rounds.length) + 1,
-        challengerChoice: undefined,
-        challengeeChoice: undefined,
-        winner: undefined
-      };
-      this.currentDuel.rounds.push(currentRound);
-    }
-
-    if (userId === this.currentDuel.challengerId) {
-      currentRound.challengerChoice = choice;
-    } else if (userId === this.currentDuel.challengeeId) {
-      currentRound.challengeeChoice = choice;
-    }
-
-    if (currentRound.challengerChoice && currentRound.challengeeChoice) {
-      this.resolveRPS(currentRound);
-    }
-
+    let r = this.currentDuel.rounds[this.currentDuel.rounds.length - 1];
+    if (!r || r.winner) { r = { roundNumber: (this.currentDuel.rounds.length) + 1, winner: undefined }; this.currentDuel.rounds.push(r); }
+    if (uId === this.currentDuel.challengerId) r.challengerChoice = choice; else if (uId === this.currentDuel.challengeeId) r.challengeeChoice = choice;
+    if (r.challengerChoice && r.challengeeChoice) this.resolveRPS(r);
     this.broadcastSync();
   }
 
-  resolveRPS(round: RPSRound) {
+  resolveRPS(r: RPSRound) {
     const { challengerId, challengeeId, seriesScore, targetWins } = this.currentDuel!;
-    const c1 = round.challengerChoice;
-    const c2 = round.challengeeChoice;
-
-    if (c1 === c2) {
-      round.winner = "tie";
-    } else if (
-      (c1 === "rock" && c2 === "scissors") ||
-      (c1 === "paper" && c2 === "rock") ||
-      (c1 === "scissors" && c2 === "paper")
-    ) {
-      round.winner = challengerId;
-      seriesScore[challengerId]++;
-    } else {
-      round.winner = challengeeId;
-      seriesScore[challengeeId]++;
-    }
-
-    round.resolvedAt = Date.now();
-
-    // Check if series is won
-    if (round.winner !== "tie" && seriesScore[round.winner] >= targetWins) {
-      this.resolveDuel(round.winner);
-    } else {
-      // Stay in RPS_ROUND but reset for next round after a short delay
-      // In a real app, we'd use a phase, but for now we'll just let the UI handle the transition
-      // based on the presence of the 'winner' in the last round.
-      this.session.timeLeft = 3; // Give players time to see the round result
-    }
+    const c1 = r.challengerChoice; const c2 = r.challengeeChoice;
+    if (c1 === c2) r.winner = "tie";
+    else if ((c1 === "rock" && c2 === "scissors") || (c1 === "paper" && c2 === "rock") || (c1 === "scissors" && c2 === "paper")) { r.winner = challengerId; seriesScore[challengerId]++; }
+    else { r.winner = challengeeId; seriesScore[challengeeId]++; }
+    r.resolvedAt = Date.now();
+    if (r.winner !== "tie" && seriesScore[r.winner] >= targetWins) this.resolveDuel(r.winner); else this.session.timeLeft = 3;
   }
 
-  resolveDuel(winnerId: string) {
-    if (!this.currentDuel) return;
-    
-    this.currentDuel.status = "finished";
-    this.currentDuel.winnerId = winnerId;
-    
-    const loserId = winnerId === this.currentDuel.challengerId ? this.currentDuel.challengeeId : this.currentDuel.challengerId;
-
-    const totalPool = this.currentDuel.bets.reduce((sum, bet) => sum + bet.amount, 0);
-    const winner = this.session.players.find(p => p.id === winnerId);
-    
-    if (winner) {
-      winner.coins += totalPool;
-    }
-
-    this.currentDuel.bets.forEach(bet => {
-      const player = this.session.players.find(p => p.id === bet.playerId);
-      if (!player) return;
-
-      if (bet.targetId === winnerId) {
-        if (player.id === winnerId) {
-          // The winner took the whole pool. Their tracked profit is totalPool - their wager.
-          bet.payout = totalPool - bet.amount;
-        } else {
-          // Spectators double their money
-          const payout = bet.amount * 2;
-          player.coins += payout;
-          updatePlayerProfile(player.id, { coins: player.coins });
-          bet.payout = payout - bet.amount;
-        }
-      } else {
-        bet.payout = -bet.amount;
-      }
+  resolveDuel(wId: string) {
+    if (!this.currentDuel) return; this.currentDuel.status = "finished"; this.currentDuel.winnerId = wId;
+    const lId = wId === this.currentDuel.challengerId ? this.currentDuel.challengeeId : this.currentDuel.challengerId;
+    const pool = this.currentDuel.bets.reduce((s, b) => s + b.amount, 0);
+    const win = this.session.players.find(p => p.id === wId); const los = this.session.players.find(p => p.id === lId);
+    const { lossModifier, winModifier } = this.session.settings;
+    let final = pool; if (win && winModifier !== 0) final += Math.floor(pool * winModifier);
+    if (win) { win.coins += final; win.stats.wins++; win.stats.totalEarned += final; win.stats.totalWon += final; }
+    if (los) { los.stats.losses++; if (lossModifier !== 0) los.coins = Math.max(0, los.coins + Math.floor(los.coins * lossModifier)); }
+    this.currentDuel.bets.forEach(b => {
+      const p = this.session.players.find(pl => pl.id === b.playerId); if (!p) return;
+      if (b.targetId === wId) {
+        const pay = p.id === wId ? final : Math.floor(b.amount * (2 + winModifier));
+        if (p.id !== wId) p.coins += pay; updatePlayerProfile(p.id, { coins: p.coins });
+        b.payout = pay - b.amount; p.stats.totalWon += pay; p.stats.totalEarned += pay;
+      } else { b.payout = -b.amount; p.stats.totalLost += b.amount; }
     });
-
-    // Update Win Streaks
-    if (winner) {
-      winner.stats.winStreak = (winner.stats.winStreak || 0) + 1;
-      updatePlayerProfile(winner.id, { coins: winner.coins, winStreak: winner.stats.winStreak });
-    }
-    const loser = this.session.players.find(p => p.id === loserId);
-    if (loser) {
-      loser.stats.winStreak = 0;
-      updatePlayerProfile(loser.id, { winStreak: 0 });
-    }
-
-    this.session.phase = "RESULTS";
-    this.session.timeLeft = 8;
+    if (win) { win.stats.winStreak++; updatePlayerProfile(win.id, { coins: win.coins, winStreak: win.stats.winStreak }); }
+    if (los) { los.stats.winStreak = 0; updatePlayerProfile(los.id, { winStreak: 0, coins: los.coins }); }
+    this.addRoundHistory({ roundNumber: this.session.roundNumber, challengerId: this.currentDuel.challengerId, challengeeId: this.currentDuel.challengeeId, challengerChoice: this.currentDuel.rounds[this.currentDuel.rounds.length - 1]?.challengerChoice, challengeeChoice: this.currentDuel.rounds[this.currentDuel.rounds.length - 1]?.challengeeChoice, winner: wId, prizePool: final, });
+    if (win) this.addEvent({ type: "win", playerId: wId, playerName: win.displayName, amount: final, message: `${win.displayName} won ${final.toLocaleString()}!`, });
+    this.session.phase = "RESULTS"; this.session.timeLeft = 8;
     this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
     this.broadcastSync();
-  }
-
-  broadcastSync() {
-    this.room.broadcast(JSON.stringify({
-      type: "SYNC",
-      session: this.session
-    }));
   }
 }
 

@@ -16,4 +16,361 @@
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   v2.2.0 ANIMATIONS & TRANSITIONS
+   ============================================ */
+
+/* Launch Animation */
+@keyframes launchFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes launchScaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9) translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+}
+
+@keyframes launchSlideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes launchLogoScale {
+  from { 
+    opacity: 0; 
+    transform: scale(0.8); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 77, 77, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(255, 77, 77, 0.6); }
+}
+
+@keyframes coinFloat {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg); 
+    opacity: 1;
+  }
+  50% { 
+    transform: translateY(-20px) rotate(180deg); 
+    opacity: 0.8;
+  }
+}
+
+@keyframes countdownPulse {
+  0% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.5); 
+    opacity: 0.8;
+  }
+  100% { 
+    transform: scale(2); 
+    opacity: 0;
+  }
+}
+
+@keyframes slideInRight {
+  from { 
+    transform: translateX(100%); 
+    opacity: 0;
+  }
+  to { 
+    transform: translateX(0); 
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Launch Animation Classes */
+.launch-container {
+  animation: launchFadeIn 0.4s ease-out forwards;
+}
+
+.launch-logo {
+  animation: launchLogoScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+.launch-title {
+  animation: launchScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.launch-subtitle {
+  animation: launchSlideUp 0.5s ease-out forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+.launch-buttons {
+  animation: launchSlideUp 0.5s ease-out forwards;
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
+.launch-footer {
+  animation: launchSlideUp 0.5s ease-out forwards;
+  animation-delay: 0.5s;
+  opacity: 0;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .launch-container,
+  .launch-logo,
+  .launch-title,
+  .launch-subtitle,
+  .launch-buttons,
+  .launch-footer {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Button Feedback Animations */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.95);
+}
+
+.btn-press:hover:not(:active) {
+  transform: scale(1.02);
+}
+
+/* Touch-friendly button sizes */
+@media (pointer: coarse) {
+  .btn-touch {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  .btn-touch-spaced {
+    margin: 6px;
+  }
+}
+
+/* Coin Animation */
+.coin-animate {
+  animation: coinFloat 1s ease-in-out;
+}
+
+/* Countdown Animation */
+.countdown-number {
+  animation: countdownPulse 0.8s ease-out forwards;
+}
+
+/* Toast Notification */
+.toast-enter {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.toast-exit {
+  animation: fadeOutUp 0.3s ease-in forwards;
+}
+
+/* Shake Animation for Errors */
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Float Animation for decorative elements */
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glow effect for active elements */
+.glow-active {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ============================================
+   MODERN UI REFRESH - v2.2.0
+   ============================================ */
+
+/* Rounded Cards & Softer Shadows */
+.card-modern {
+  border-radius: 1.5rem;
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Improved Spacing Scale */
+.space-xs { margin: 4px; }
+.space-sm { margin: 8px; }
+.space-md { margin: 12px; }
+.space-lg { margin: 16px; }
+.space-xl { margin: 24px; }
+.space-2xl { margin: 32px; }
+.space-3xl { margin: 48px; }
+
+.gap-xs { gap: 4px; }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 12px; }
+.gap-lg { gap: 16px; }
+.gap-xl { gap: 24px; }
+.gap-2xl { gap: 32px; }
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Mobile: < 768px */
+@media (max-width: 767px) {
+  .responsive-container {
+    padding: 1rem;
+  }
+  
+  .responsive-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .responsive-text-xl {
+    font-size: 1.5rem;
+  }
+  
+  .responsive-text-lg {
+    font-size: 1.25rem;
+  }
+  
+  /* Prevent horizontal scroll */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+}
+
+/* Tablet: 768px - 1024px */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .responsive-container {
+    padding: 1.5rem;
+  }
+  
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop: > 1024px */
+@media (min-width: 1025px) {
+  .responsive-container {
+    padding: 3rem;
+  }
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area for mobile devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #ff4d4d 0%, #ffd700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Focus states */
+.focus-ring:focus-visible {
+  outline: 2px solid #ff4d4d;
+  outline-offset: 2px;
 }

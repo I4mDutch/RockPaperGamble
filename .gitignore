@@ -9,3 +9,4 @@ build/
 .partykit/
 .turbo/
 package-lock.json
+.aider*
