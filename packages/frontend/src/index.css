@@ -4,16 +4,286 @@
   --color-brand-primary: #ff4d4d;
   --color-brand-secondary: #4d4dff;
   --color-brand-accent: #ffd700;
-  
+
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 :root {
-  background-color: #0f172a;
-  color: #f8fafc;
+  /* Brand Colors */
+  --color-brand-primary: #ff4d4d;
+  --color-brand-secondary: #4d4dff;
+  --color-brand-accent: #ffd700;
+
+  /* Semantic Colors */
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+
+  /* Shadows - Softer with rgba opacity */
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.2);
+  --shadow-hard: 0 12px 40px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px rgba(255, 77, 77, 0.3);
+
+  /* Animation Timing */
+  --transition-fast: 150ms ease-out;
+  --transition-base: 250ms ease-out;
+  --transition-slow: 350ms ease-out;
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Spacing Scale */
+  --space-safe-top: env(safe-area-inset-top);
+  --space-safe-bottom: env(safe-area-inset-bottom);
+  --space-safe-left: env(safe-area-inset-left);
+  --space-safe-right: env(safe-area-inset-right);
+
+  /* Base */
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  padding: var(--space-safe-top) var(--space-safe-right) var(--space-safe-bottom) var(--space-safe-left);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Button Press Animation */
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(0.98);
+  }
+}
+
+/* Touch-friendly Button Base Styles */
+button,
+[role="button"],
+.btn {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: transform var(--transition-fast),
+              box-shadow var(--transition-base),
+              background-color var(--transition-base);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button:active,
+[role="button"]:active,
+.btn:active {
+  animation: buttonPress 150ms ease-out forwards;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--color-brand-accent);
+  outline-offset: 3px;
+}
+
+/* Hover Effects with Smooth Transitions */
+.interactive-hover {
+  transition: transform var(--transition-base),
+              box-shadow var(--transition-base),
+              background-color var(--transition-base);
+}
+
+.interactive-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.interactive-hover:active {
+  transform: translateY(0);
+  box-shadow: none;
+  animation: buttonPress 150ms ease-out forwards;
+}
+
+/* Rounded Card Styles */
+.card-rounded {
+  border-radius: 1rem; /* rounded-2xl */
+}
+
+.card-rounded-xl {
+  border-radius: 1.5rem; /* rounded-3xl */
+}
+
+.card-modern {
+  background: var(--color-bg-secondary);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
+  transition: box-shadow var(--transition-base),
+              transform var(--transition-base);
+}
+
+.card-modern:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+/* Responsive Typography with clamp() */
+.text-responsive-xs {
+  font-size: clamp(0.625rem, 0.5rem + 0.5vw, 0.75rem);
+}
+
+.text-responsive-sm {
+  font-size: clamp(0.75rem, 0.6rem + 0.6vw, 0.875rem);
+}
+
+.text-responsive-base {
+  font-size: clamp(0.875rem, 0.75rem + 0.75vw, 1rem);
+}
+
+.text-responsive-lg {
+  font-size: clamp(1rem, 0.8rem + 1vw, 1.25rem);
+}
+
+.text-responsive-xl {
+  font-size: clamp(1.25rem, 0.9rem + 1.5vw, 1.5rem);
+}
+
+.text-responsive-2xl {
+  font-size: clamp(1.5rem, 1rem + 2vw, 2rem);
+}
+
+.text-responsive-3xl {
+  font-size: clamp(1.875rem, 1.2rem + 3vw, 2.5rem);
+}
+
+.text-responsive-4xl {
+  font-size: clamp(2.25rem, 1.5rem + 3.5vw, 3.5rem);
+}
+
+.text-responsive-5xl {
+  font-size: clamp(3rem, 2rem + 5vw, 4.5rem);
+}
+
+/* Responsive Breakpoints */
+
+/* Mobile: < 768px */
+@media (max-width: 767px) {
+  :root {
+    --space-responsive: 0.5rem;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  .mobile-full-width {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+
+  .mobile-p-4 {
+    padding: 1rem;
+  }
+
+  .mobile-gap-2 {
+    gap: 0.5rem;
+  }
+}
+
+/* Tablet: 768px - 1024px */
+@media (min-width: 768px) and (max-width: 1024px) {
+  :root {
+    --space-responsive: 0.75rem;
+  }
+
+  .tablet-hidden {
+    display: none !important;
+  }
+}
+
+/* Desktop: > 1024px */
+@media (min-width: 1025px) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+/* Utility Classes */
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+.shadow-medium {
+  box-shadow: var(--shadow-medium);
+}
+
+.shadow-hard {
+  box-shadow: var(--shadow-hard);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Focus Visible Styles */
+:focus-visible {
+  outline: 3px solid var(--color-brand-accent);
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  button:hover,
+  [role="button"]:hover,
+  .btn:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .interactive-hover:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Ensure tap targets are large enough */
+  a, button, [role="button"] {
+    min-height: 48px;
+    min-width: 48px;
+  }
 }

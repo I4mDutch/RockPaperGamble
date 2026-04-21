@@ -130,7 +130,7 @@ export const ChallengeSelector = () => {
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative">
                     <Avatar url={player.avatarUrl} name={player.displayName} size="xl" />
-                    <div className={`absolute -bottom-2 -right-2 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase ${
+                    <div className={`absolute -bottom-2 -right-2 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase flex items-center gap-1 ${
                       playerBroke ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-brand-accent text-slate-900'
                     }`}>
                       {playerBroke ? 'BROKE' : `${player.coins.toLocaleString()} 🪙`}
@@ -160,14 +160,14 @@ export const ChallengeSelector = () => {
                 )}
               </button>
 
-              {/* Gift button — visible for anyone with coins */}
+              {/* Gift button — always visible for anyone with coins */}
               {!isBroke && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setGiftTarget(player.id); }}
-                  className="absolute top-3 left-3 p-2 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 rounded-xl transition-all opacity-0 group-hover:opacity-100 border border-emerald-500/20"
+                  className="absolute top-4 right-4 p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-2xl transition-all border border-emerald-500/20 flex items-center justify-center shadow-lg active:scale-90"
                   title="Gift coins"
                 >
-                  <Gift size={16} />
+                  <Gift size={20} />
                 </button>
               )}
             </div>

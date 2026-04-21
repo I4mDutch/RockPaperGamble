@@ -6,6 +6,7 @@ export interface Player {
   avatarUrl?: string;
   coins: number;
   isConnected: boolean;
+  isReady: boolean;
   role: "challenger" | "challengee" | "spectator";
   stats: {
     wins: number;
@@ -23,6 +24,46 @@ export interface Bet {
   placedAt: number;
   locked: boolean;
   payout?: number;
+}
+
+export interface GameSettings {
+  startingMoney: number;
+  balanceModifiers?: {
+    lossModifier: number;
+    winModifier: number;
+  };
+}
+
+export interface RoundHistory {
+  roundNumber: number;
+  winnerId: string;
+  challengerId: string;
+  challengeeId: string;
+  totalPot: number;
+  timestamp: number;
+}
+
+export type GameEventType = 
+  | "PLAYER_JOINED"
+  | "PLAYER_LEFT"
+  | "PLAYER_READY"
+  | "PLAYER_UNREADY"
+  | "GAME_STARTED"
+  | "BET_PLACED"
+  | "DUEL_STARTED"
+  | "PLAYER_WON"
+  | "PLAYER_LOST"
+  | "ROUND_COMPLETED"
+  | "SETTINGS_UPDATED"
+  | "STARTING_PLAYER_SET";
+
+export interface GameEvent {
+  id: string;
+  type: GameEventType;
+  message: string;
+  timestamp: number;
+  playerId?: string;
+  data?: Record<string, any>;
 }
 
 export interface RPSRound {
@@ -68,4 +109,8 @@ export interface GameSession {
   phase: GamePhase;
   createdAt: number;
   timeLeft: number;
+  settings?: GameSettings;
+  playerTurnOrder?: string[];
+  roundHistory?: RoundHistory[];
+  events?: GameEvent[];
 }

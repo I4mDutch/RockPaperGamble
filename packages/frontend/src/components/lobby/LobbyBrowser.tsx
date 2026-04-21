@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, LogIn, Swords } from 'lucide-react'
+import { Plus, LogIn, Swords, Loader2 } from 'lucide-react'
 import { useGameStore } from '@/store/gameStore'
 
 
@@ -9,16 +9,21 @@ interface LobbyBrowserProps {
 
 export const LobbyBrowser = ({ onJoin }: LobbyBrowserProps) => {
   const [joinCode, setJoinCode] = useState('')
+  const [isJoining, setIsJoining] = useState(false)
   const { createLobby } = useGameStore()
 
   const handleCreate = () => {
+    if (isJoining) return
+    setIsJoining(true)
     const code = createLobby()
     onJoin(code)
+    // The parent will handle the navigation/mount of LobbyRoom which replaces this component
   }
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault()
-    if (joinCode.length === 6) {
+    if (joinCode.length === 6 && !isJoining) {
+      setIsJoining(true)
       onJoin(joinCode.toUpperCase())
     }
   }
@@ -38,10 +43,15 @@ export const LobbyBrowser = ({ onJoin }: LobbyBrowserProps) => {
           </div>
           <button
             onClick={handleCreate}
-            className="w-full py-4 bg-brand-primary hover:bg-red-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 group-active:scale-95"
+            disabled={isJoining}
+            className="w-full py-4 bg-brand-primary hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 group-active:scale-95"
           >
-            <Swords size={20} />
-            Create Lobby
+            {isJoining ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <Swords size={20} />
+            )}
+            {isJoining ? 'Creating...' : 'Create Lobby'}
           </button>
         </div>
       </div>
@@ -65,13 +75,19 @@ export const LobbyBrowser = ({ onJoin }: LobbyBrowserProps) => {
               placeholder="ENTER CODE"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-4 text-center text-2xl font-black tracking-[0.5em] text-white focus:outline-none focus:border-brand-secondary transition-colors placeholder:text-slate-700 placeholder:tracking-normal"
+              disabled={isJoining}
+              className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-4 text-center text-2xl font-black tracking-[0.5em] text-white focus:outline-none focus:border-brand-secondary transition-colors placeholder:text-slate-700 placeholder:tracking-normal disabled:opacity-50"
             />
             <button
-              disabled={joinCode.length !== 6}
+              disabled={joinCode.length !== 6 || isJoining}
               className="w-full py-4 bg-brand-secondary hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl transition-all shadow-lg shadow-brand-secondary/20 flex items-center justify-center gap-2"
             >
-              Join Lobby
+              {isJoining ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <LogIn size={20} />
+              )}
+              {isJoining ? 'Joining...' : 'Join Lobby'}
             </button>
           </form>
         </div>

@@ -1,6 +1,6 @@
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
-import { Users, Shield, ArrowLeft, Play } from 'lucide-react'
+import { Users, Shield, ArrowLeft, Play, AlertCircle } from 'lucide-react'
 import { Avatar } from '@/components/common/Avatar'
 
 interface LobbyRoomProps {
@@ -8,14 +8,38 @@ interface LobbyRoomProps {
 }
 
 export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
-  const { session, isConnected } = useGameStore()
+  const { session, isConnected, isConnecting, error } = useGameStore()
   const { user, guestUser } = useAuthStore()
 
-  if (!isConnected) {
+  if (error) {
     return (
-      <div className="text-center space-y-4">
-        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-slate-400">Connecting to lobby...</p>
+      <div className="text-center space-y-6 max-w-sm mx-auto p-8 bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-rose-500/20 shadow-2xl animate-in fade-in zoom-in duration-300">
+        <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-2">
+          <AlertCircle size={32} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">Connection Failed</h2>
+          <p className="text-slate-400 font-medium">{error}</p>
+        </div>
+        <button
+          onClick={onLeave}
+          className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2"
+        >
+          <ArrowLeft size={20} />
+          Back to Browser
+        </button>
+      </div>
+    )
+  }
+
+  if (!isConnected || isConnecting) {
+    return (
+      <div className="text-center space-y-6 p-12 bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl animate-in fade-in duration-300">
+        <div className="w-16 h-16 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto shadow-[0_0_20px_rgba(255,77,77,0.3)]" />
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">Connecting</h2>
+          <p className="text-slate-400 font-medium animate-pulse">Establishing secure link to lobby...</p>
+        </div>
       </div>
     )
   }

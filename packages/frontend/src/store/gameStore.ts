@@ -6,6 +6,8 @@ interface GameState {
   socket: PartySocket | null
   session: GameSession | null
   isConnected: boolean
+  isConnecting: boolean
+  error: string | null
   
   // Actions
   connect: (lobbyId: string, userId: string, displayName: string, avatarUrl?: string) => void
@@ -17,11 +19,27 @@ export const useGameStore = create<GameState>((set, get) => ({
   socket: null,
   session: null,
   isConnected: false,
+  isConnecting: false,
+  error: null,
 
   connect: (lobbyId: string, userId: string, displayName: string, avatarUrl?: string) => {
-    if (get().socket) {
-      get().socket?.close()
+    const currentSocket = get().socket;
+    if (currentSocket) {
+      // If we're already connected to this room with this user, don't reconnect
+      try {
+        const url = new URL(currentSocket.url);
+        const query = new URLSearchParams(url.search);
+        if (currentSocket.room === lobbyId && query.get('userId') === userId) {
+          return;
+        }
+      } catch (e) {
+        // Fallback if URL parsing fails
+      }
+      currentSocket.close();
+      set({ socket: null, isConnected: false, isConnecting: false });
     }
+
+    set({ isConnecting: true, error: null });
 
     const host = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
     const socket = new PartySocket({
@@ -35,18 +53,39 @@ export const useGameStore = create<GameState>((set, get) => ({
     })
 
     socket.addEventListener('message', (event) => {
-      const message = JSON.parse(event.data)
-      if (message.type === 'SYNC') {
-        set({ session: message.session })
+      if (get().socket !== socket) return
+      try {
+        const message = JSON.parse(event.data)
+        if (message.type === 'SYNC') {
+          set({ session: message.session })
+        }
+      } catch (err) {
+        console.error('Failed to parse message', err)
       }
     })
 
     socket.addEventListener('open', () => {
-      set({ isConnected: true })
+      if (get().socket !== socket) return
+      set({ isConnected: true, isConnecting: false, error: null })
     })
 
-    socket.addEventListener('close', () => {
-      set({ isConnected: false, session: null })
+    socket.addEventListener('close', (event) => {
+      if (get().socket !== socket) return
+      set({ 
+        isConnected: false, 
+        isConnecting: false, 
+        session: null,
+        error: event.wasClean ? null : 'Connection lost'
+      })
+    })
+
+    socket.addEventListener('error', (event) => {
+      if (get().socket !== socket) return
+      set({ 
+        isConnected: false, 
+        isConnecting: false, 
+        error: 'Failed to connect' 
+      })
     })
 
     set({ socket })
@@ -54,7 +93,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   disconnect: () => {
     get().socket?.close()
-    set({ socket: null, session: null, isConnected: false })
+    set({ socket: null, session: null, isConnected: false, isConnecting: false, error: null })
   },
 
   createLobby: () => {

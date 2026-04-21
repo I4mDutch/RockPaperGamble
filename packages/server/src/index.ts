@@ -1,5 +1,5 @@
 import type * as Party from "partykit/server";
-import { GameSession, Player, GamePhase, RPSChoice, Duel, RPSRound, Bet } from "@rpg/shared";
+import { GameSession, Player, GamePhase, RPSChoice, Duel, RPSRound, Bet, GameSettings, RoundHistory, GameEvent, GameEventType } from "@rpg/shared";
 import { getPlayerStats, updatePlayerProfile } from './db';
 
 export default class Server implements Party.Server {
@@ -19,10 +19,101 @@ export default class Server implements Party.Server {
       createdAt: Date.now(),
       currentDuelId: null,
       timeLeft: 0,
+      settings: this.getDefaultSettings(),
+      playerTurnOrder: [],
+      roundHistory: [],
+      events: [],
     };
 
     // Start the global timer loop
     setInterval(() => this.tick(), 1000);
+  }
+
+  getDefaultSettings(): GameSettings {
+    return {
+      startingMoney: 1000,
+      balanceModifiers: {
+        lossModifier: 0,
+        winModifier: 0,
+      },
+    };
+  }
+
+  calculateModifiers(startingMoney: number): { lossModifier: number; winModifier: number } {
+    if (startingMoney >= 500000) {
+      return { lossModifier: 50, winModifier: -35 };
+    } else if (startingMoney >= 100000) {
+      return { lossModifier: 25, winModifier: -15 };
+    } else if (startingMoney >= 10000) {
+      return { lossModifier: 0, winModifier: 0 };
+    } else if (startingMoney >= 1000) {
+      return { lossModifier: 0, winModifier: 0 };
+    } else {
+      return { lossModifier: -50, winModifier: 35 };
+    }
+  }
+
+  generateEventId(): string {
+    return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  addEvent(type: GameEventType, message: string, playerId?: string, data?: Record<string, any>) {
+    if (!this.session.events) {
+      this.session.events = [];
+    }
+    
+    const event: GameEvent = {
+      id: this.generateEventId(),
+      type,
+      message,
+      timestamp: Date.now(),
+      playerId,
+      data,
+    };
+    
+    this.session.events.push(event);
+    
+    // Keep only last 50 events
+    if (this.session.events.length > 50) {
+      this.session.events = this.session.events.slice(-50);
+    }
+    
+    this.broadcastEvent(event);
+  }
+
+  broadcastEvent(event: GameEvent) {
+    this.room.broadcast(JSON.stringify({
+      type: "EVENT",
+      event,
+    }));
+  }
+
+  addRoundHistory(winnerId: string, challengerId: string, challengeeId: string, totalPot: number) {
+    if (!this.session.roundHistory) {
+      this.session.roundHistory = [];
+    }
+    
+    const round: RoundHistory = {
+      roundNumber: this.session.roundNumber,
+      winnerId,
+      challengerId,
+      challengeeId,
+      totalPot,
+      timestamp: Date.now(),
+    };
+    
+    this.session.roundHistory.push(round);
+    
+    // Keep only last 10 rounds
+    if (this.session.roundHistory.length > 10) {
+      this.session.roundHistory = this.session.roundHistory.slice(-10);
+    }
+  }
+
+  canStartGame(): boolean {
+    const nonHostPlayers = this.session.players.filter(p => p.id !== this.session.hostId);
+    if (nonHostPlayers.length === 0) return false;
+    return nonHostPlayers.every(p => p.isReady);
   }
 
   tick() {
@@ -113,10 +204,12 @@ export default class Server implements Party.Server {
           avatarUrl: avatarUrl,
           coins: coins,
           isConnected: true,
+          isReady: false,
           role: "spectator",
           stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: winStreak },
         };
         this.session.players.push(newPlayer);
+        this.addEvent("PLAYER_JOINED", `${displayName} joined the game`, userId);
       } else {
         existingPlayer.isConnected = true;
         existingPlayer.displayName = displayName;
@@ -137,9 +230,11 @@ export default class Server implements Party.Server {
           displayName,
           coins: 1000,
           isConnected: true,
+          isReady: false,
           role: "spectator",
           stats: { wins: 0, losses: 0, totalWagered: 0, totalEarned: 0, winStreak: 0 }
         });
+        this.addEvent("PLAYER_JOINED", `${displayName} joined the game`, userId);
       }
     }
 
@@ -171,6 +266,18 @@ export default class Server implements Party.Server {
       case "GIFT_COINS":
         this.handleGiftCoins(userId, msg.targetId, msg.amount);
         break;
+      case "READY_PLAYER":
+        this.handleReadyPlayer(userId, true);
+        break;
+      case "UNREADY_PLAYER":
+        this.handleReadyPlayer(userId, false);
+        break;
+      case "UPDATE_SETTINGS":
+        this.handleUpdateSettings(userId, msg.settings);
+        break;
+      case "SET_STARTING_PLAYER":
+        this.handleSetStartingPlayer(userId, msg.targetId);
+        break;
     }
   }
 
@@ -192,9 +299,77 @@ export default class Server implements Party.Server {
 
   handleStartGame(userId: string) {
     if (this.session.hostId !== userId) return;
+    if (!this.canStartGame()) return;
+    
     this.session.status = "in_progress";
-    this.session.turnOrder = this.session.players.map(p => p.id);
+    
+    // Initialize playerTurnOrder if not set
+    if (!this.session.playerTurnOrder || this.session.playerTurnOrder.length === 0) {
+      this.session.playerTurnOrder = this.session.players.map(p => p.id);
+    }
+    
+    // Use playerTurnOrder for turn order if set, otherwise fall back to lobby order
+    this.session.turnOrder = this.session.playerTurnOrder.length > 0 
+      ? [...this.session.playerTurnOrder]
+      : this.session.players.map(p => p.id);
+    
+    // Apply starting money if settings exist
+    if (this.session.settings?.startingMoney) {
+      const startingMoney = this.session.settings.startingMoney;
+      this.session.players.forEach(p => {
+        p.coins = startingMoney;
+      });
+    }
+    
+    this.addEvent("GAME_STARTED", "Game started!");
     this.startNewRound();
+  }
+
+  handleReadyPlayer(userId: string, isReady: boolean) {
+    const player = this.session.players.find(p => p.id === userId);
+    if (!player) return;
+    
+    player.isReady = isReady;
+    this.addEvent(
+      isReady ? "PLAYER_READY" : "PLAYER_UNREADY",
+      `${player.displayName} is ${isReady ? 'ready' : 'not ready'}`,
+      userId
+    );
+    this.broadcastSync();
+  }
+
+  handleUpdateSettings(userId: string, settings: Partial<GameSettings>) {
+    if (this.session.hostId !== userId) return;
+    
+    if (!this.session.settings) {
+      this.session.settings = this.getDefaultSettings();
+    }
+    
+    if (settings.startingMoney !== undefined) {
+      // Clamp starting money to valid range
+      const startingMoney = Math.max(100, Math.min(1000000, settings.startingMoney));
+      this.session.settings.startingMoney = startingMoney;
+      this.session.settings.balanceModifiers = this.calculateModifiers(startingMoney);
+    }
+    
+    this.addEvent("SETTINGS_UPDATED", `Game settings updated`, userId, { settings: this.session.settings });
+    this.broadcastSync();
+  }
+
+  handleSetStartingPlayer(userId: string, targetId: string) {
+    if (this.session.hostId !== userId) return;
+    if (this.session.status !== "lobby") return;
+    
+    const targetPlayer = this.session.players.find(p => p.id === targetId);
+    if (!targetPlayer) return;
+    
+    // Calculate turn order: target first, then others in lobby order
+    const lobbyOrder = this.session.players.map(p => p.id);
+    const filtered = lobbyOrder.filter(id => id !== targetId);
+    this.session.playerTurnOrder = [targetId, ...filtered];
+    
+    this.addEvent("STARTING_PLAYER_SET", `${targetPlayer.displayName} will start first`, targetId);
+    this.broadcastSync();
   }
 
   startNewRound() {
@@ -230,6 +405,7 @@ export default class Server implements Party.Server {
     receiver.coins += amount;
     updatePlayerProfile(sender.id, { coins: sender.coins });
     updatePlayerProfile(receiver.id, { coins: receiver.coins });
+    this.addEvent("BET_PLACED", `${sender.displayName} gifted ${amount} coins to ${receiver.displayName}`, senderId, { amount, targetId });
     this.broadcastSync();
   }
 
@@ -294,6 +470,7 @@ export default class Server implements Party.Server {
     };
     this.currentDuel = this.session.currentDuel;
     
+    this.addEvent("DUEL_STARTED", `${challenger.displayName} challenged ${challengee.displayName} for ${wager} coins`, userId, { wager, targetId });
     this.broadcastSync();
   }
 
@@ -316,6 +493,7 @@ export default class Server implements Party.Server {
       payout: 0
     });
     
+    this.addEvent("BET_PLACED", `${player.displayName} bet ${amount} coins`, userId, { amount, targetId });
     this.broadcastSync();
   }
 
@@ -386,32 +564,48 @@ export default class Server implements Party.Server {
     
     const loserId = winnerId === this.currentDuel.challengerId ? this.currentDuel.challengeeId : this.currentDuel.challengerId;
 
-    const totalPool = this.currentDuel.bets.reduce((sum, bet) => sum + bet.amount, 0);
+    let totalPool = this.currentDuel.bets.reduce((sum, bet) => sum + bet.amount, 0);
     const winner = this.session.players.find(p => p.id === winnerId);
     
-    if (winner) {
-      winner.coins += totalPool;
-    }
-
+    // First, pay out the spectators who won
     this.currentDuel.bets.forEach(bet => {
       const player = this.session.players.find(p => p.id === bet.playerId);
       if (!player) return;
 
+      // Only spectators get the 2x fixed payout
+      const isDuelist = player.id === this.currentDuel?.challengerId || player.id === this.currentDuel?.challengeeId;
+
       if (bet.targetId === winnerId) {
-        if (player.id === winnerId) {
-          // The winner took the whole pool. Their tracked profit is totalPool - their wager.
-          bet.payout = totalPool - bet.amount;
+        if (isDuelist) {
+          // Duelists will be handled at the end with the remainder of the pool
+          bet.payout = 0; // Temporary, will be updated
         } else {
-          // Spectators double their money
+          // Spectators double their money (return bet + profit equal to bet)
           const payout = bet.amount * 2;
           player.coins += payout;
           updatePlayerProfile(player.id, { coins: player.coins });
-          bet.payout = payout - bet.amount;
+          bet.payout = bet.amount; // Their profit is 1x their bet
+          totalPool -= payout; // Remove their payout from the pool
         }
       } else {
+        // Lost bets
         bet.payout = -bet.amount;
+        // The money stays in the pool for the winner
       }
     });
+
+    // Finally, the duel winner gets whatever is left in the pool
+    if (winner) {
+      winner.coins += Math.max(0, totalPool); // Should not be negative, but safety first
+      updatePlayerProfile(winner.id, { coins: winner.coins });
+      
+      // Update the winner's bet payout record for the UI
+      const winnerBet = this.currentDuel.bets.find(b => b.playerId === winnerId);
+      if (winnerBet) {
+        // Their profit is the final pool amount minus their original wager
+        winnerBet.payout = totalPool - winnerBet.amount;
+      }
+    }
 
     // Update Win Streaks
     if (winner) {
@@ -427,6 +621,15 @@ export default class Server implements Party.Server {
     this.session.phase = "RESULTS";
     this.session.timeLeft = 8;
     this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
+    
+    // Add to round history
+    this.addRoundHistory(winnerId, this.currentDuel.challengerId, this.currentDuel.challengeeId, totalPool);
+    
+    // Add events for winner and loser
+    this.addEvent("PLAYER_WON", `${winner?.displayName} won the duel and ${totalPool} coins!`, winnerId, { amount: totalPool });
+    this.addEvent("PLAYER_LOST", `${loser?.displayName} lost the duel`, loserId);
+    this.addEvent("ROUND_COMPLETED", `Round ${this.session.roundNumber} completed`, undefined, { roundNumber: this.session.roundNumber });
+    
     this.broadcastSync();
   }
 

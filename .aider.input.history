@@ -1,0 +1,45 @@
+
+# 2026-04-19 15:43:30.182531
++y
+
+# 2026-04-19 15:43:37.528100
++n
+
+# 2026-04-19 15:44:59.756761
++/model
+
+# 2026-04-19 15:46:41.377649
++aider --model openrouter/
+
+# 2026-04-19 15:46:58.518193
++y
+
+# 2026-04-19 15:47:24.249054
++n
+
+# 2026-04-19 15:47:28.066264
++/model
+
+# 2026-04-19 15:48:23.874971
++Can you fix these bugs: Lobby: Click to Ready Up Button ; reorder turn arrows ; settings modal doesnt sync with the game 1:1 100% of the time ; settings modal--number is a bit buggy to edit 
+
+# 2026-04-19 15:48:38.287929
++Can you fix these bugs: Lobby: Click to Ready Up Button ; reorder turn arrows ; settings modal doesnt sync with the game 1:1 100% of the time ; settings modal--
+
+# 2026-04-19 15:49:00.305474
++/model openrouter/elephant-alpha
+
+# 2026-04-19 15:49:32.048834
++Can you fix these bugs: Lobby: Click to Ready Up Button ; reorder turn arrows ; settings modal doesnt sync with the game 1:1 100% of the time ; settings modal--number editer is a bit buggy
+
+# 2026-04-19 15:49:48.706261
++y
+
+# 2026-04-20 04:46:35.269958
++/model
+
+# 2026-04-20 04:47:06.721817
++/model kimi-k2.5:cloud
+
+# 2026-04-20 04:47:20.093461
++Fix the arrows and ready up button in the lobby

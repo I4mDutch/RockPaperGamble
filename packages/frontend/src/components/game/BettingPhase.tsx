@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
-import { Coins, Flame, Timer, CheckCircle2 } from 'lucide-react'
+import { Coins, Flame, Timer, CheckCircle2, ShieldAlert } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 
 export const BettingPhase = () => {
@@ -26,6 +26,10 @@ export const BettingPhase = () => {
   const myBet = session.currentDuel?.bets.find(b => b.playerId === userId)
   const hasBet = !!myBet
 
+  // Get initial match wagers (the ones placed by the duelists themselves)
+  const challengerWager = session.currentDuel?.bets.find(b => b.playerId === challenger.id && b.targetId === challenger.id)
+  const challengeeWager = session.currentDuel?.bets.find(b => b.playerId === challengee.id && b.targetId === challengee.id)
+
   const handleBet = (targetId: string) => {
     if (hasBet) return
     socket?.send(JSON.stringify({
@@ -39,18 +43,24 @@ export const BettingPhase = () => {
     <div className="w-full max-w-4xl space-y-12 animate-in fade-in zoom-in duration-500">
       <div className="text-center space-y-8">
         <div className="flex items-center justify-center gap-8 text-white">
-          <div className="text-right group">
-            <div className="relative mb-4">
+          <div className="text-right group flex-1">
+            <div className="relative mb-4 inline-block">
               <Avatar url={challenger.avatarUrl} name={challenger.displayName} size="2xl" className={isChallenger ? 'ring-4 ring-brand-primary ring-offset-8 ring-offset-slate-900' : ''} />
               {isChallenger && (
                 <div className="absolute -top-3 -right-3 bg-brand-primary text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-widest shadow-xl">YOU</div>
               )}
             </div>
-            <p className="text-3xl font-black italic tracking-tighter uppercase">{challenger.displayName}</p>
+            <p className="text-3xl font-black italic tracking-tighter uppercase truncate max-w-[200px] ml-auto">{challenger.displayName}</p>
             <p className="text-brand-primary text-sm font-black uppercase tracking-widest mt-1">Challenger</p>
+            {challengerWager && (
+              <div className="mt-4 inline-flex items-center gap-2 bg-brand-primary/10 border border-brand-primary/20 px-3 py-1.5 rounded-xl text-brand-primary animate-pulse">
+                <ShieldAlert size={14} />
+                <span className="text-xs font-black tracking-widest uppercase">Wager: {challengerWager.amount} 🪙</span>
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 shrink-0">
             <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center border border-white/10 shadow-inner">
               <span className="text-2xl font-black italic text-slate-500">VS</span>
             </div>
@@ -69,15 +79,21 @@ export const BettingPhase = () => {
             </div>
           </div>
 
-          <div className="text-left group">
-            <div className="relative mb-4">
+          <div className="text-left group flex-1">
+            <div className="relative mb-4 inline-block">
               <Avatar url={challengee.avatarUrl} name={challengee.displayName} size="2xl" className={isChallengee ? 'ring-4 ring-brand-accent ring-offset-8 ring-offset-slate-900' : ''} />
               {isChallengee && (
                 <div className="absolute -top-3 -left-3 bg-brand-accent text-slate-900 text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-widest shadow-xl">YOU</div>
               )}
             </div>
-            <p className="text-3xl font-black italic tracking-tighter uppercase">{challengee.displayName}</p>
+            <p className="text-3xl font-black italic tracking-tighter uppercase truncate max-w-[200px]">{challengee.displayName}</p>
             <p className="text-brand-accent text-sm font-black uppercase tracking-widest mt-1">Challengee</p>
+            {challengeeWager && (
+              <div className="mt-4 inline-flex items-center gap-2 bg-brand-accent/10 border border-brand-accent/20 px-3 py-1.5 rounded-xl text-brand-accent animate-pulse">
+                <ShieldAlert size={14} />
+                <span className="text-xs font-black tracking-widest uppercase">Wager: {challengeeWager.amount} 🪙</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
