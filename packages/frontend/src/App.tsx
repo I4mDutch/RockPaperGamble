@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthGuard } from './components/auth/AuthGuard'
 import { SignInPage } from './components/auth/SignInPage'
 import { LobbyBrowser } from './components/lobby/LobbyBrowser'
@@ -14,7 +14,7 @@ function GameContent() {
   const [lobbyCode, setLobbyCode] = useState<string | null>(null)
   const [showInfo, setShowInfo] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const { connect, disconnect, session } = useGameStore()
+  const { connect, disconnect, session, isConnected, isConnecting, error, setError } = useGameStore()
   const { user, guestUser } = useAuthStore()
 
   const handleJoin = (code: string) => {
@@ -39,13 +39,21 @@ function GameContent() {
     setLobbyCode(null)
   }
 
+
+  const handleRetry = () => {
+    setError(null)
+    setLobbyCode(null)
+  }
+
+  const showLobbyBrowser = !lobbyCode || (!!error && !isConnecting && !isConnected)
+
   if (session?.status === 'in_progress') {
     return <GameScreen />
   }
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 overflow-x-hidden safe-area-top safe-area-bottom safe-area-left safe-area-right">
-      {!lobbyCode ? (
+      {showLobbyBrowser ? (
         <div className="space-y-6 sm:space-y-8 lg:space-y-12 w-full max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700 overflow-safe">
           <div className="text-center space-y-2 sm:space-y-4">
             <h2 className="text-responsive-4xl font-black tracking-tighter text-white italic">
@@ -53,14 +61,14 @@ function GameContent() {
             </h2>
             <p className="text-slate-400 font-medium text-responsive-base">Create a private game or join your friends.</p>
           </div>
-          <LobbyBrowser onJoin={handleJoin} />
+          <LobbyBrowser onJoin={handleJoin} isJoining={isConnecting} error={error} onRetry={handleRetry} />
         </div>
       ) : (
         <LobbyRoom onLeave={handleLeave} />
       )}
 
       {/* Profile Button */}
-      {!lobbyCode && (
+      {showLobbyBrowser && (
         <div className="fixed top-4 sm:top-6 right-4 sm:right-6 z-50 safe-area-top safe-area-right">
           <button
             onClick={() => setShowProfile(true)}
