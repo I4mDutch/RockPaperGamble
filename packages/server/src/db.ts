@@ -1,13 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+export function getSupabase(env: any) {
+  const supabaseUrl = env.SUPABASE_URL || '';
+  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY || '';
 
-export const supabase = (supabaseUrl && supabaseKey) 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
+  if (!supabaseUrl || !supabaseKey) return null;
+  return createClient(supabaseUrl, supabaseKey);
+}
 
-export async function getPlayerStats(userId: string, initialData?: { displayName?: string, avatarUrl?: string }): Promise<{ coins: number; winStreak: number; avatarUrl?: string }> {
+export async function getPlayerStats(userId: string, env: any, initialData?: { displayName?: string, avatarUrl?: string }): Promise<{ coins: number; winStreak: number; avatarUrl?: string }> {
+  const supabase = getSupabase(env);
   if (!supabase) return { coins: 1000, winStreak: 0 };
 
   const { data, error } = await supabase
@@ -32,7 +34,6 @@ export async function getPlayerStats(userId: string, initialData?: { displayName
     return { coins: 1000, winStreak: 0, avatarUrl: initialData?.avatarUrl };
   }
 
-  // If we have a name/avatar in the DB, use it. Otherwise use the initial data.
   return { 
     coins: data.coins, 
     winStreak: data.win_streak || 0,
@@ -40,7 +41,8 @@ export async function getPlayerStats(userId: string, initialData?: { displayName
   };
 }
 
-export async function updatePlayerProfile(userId: string, stats: { coins?: number; winStreak?: number; avatarUrl?: string; displayName?: string }) {
+export async function updatePlayerProfile(userId: string, env: any, stats: { coins?: number; winStreak?: number; avatarUrl?: string; displayName?: string }) {
+  const supabase = getSupabase(env);
   if (!supabase) return;
 
   const updateData: any = {};
@@ -53,17 +55,4 @@ export async function updatePlayerProfile(userId: string, stats: { coins?: numbe
     .from('profiles')
     .update(updateData)
     .eq('id', userId);
-}
-
-export async function saveDuelResult(duelId: string, winnerId: string, payouts: any) {
-  if (!supabase) return;
-
-  await supabase
-    .from('duel_history')
-    .insert({
-      id: duelId,
-      winner_id: winnerId,
-      payouts: payouts,
-      created_at: new Date().toISOString()
-    });
 }
