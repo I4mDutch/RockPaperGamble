@@ -117,9 +117,19 @@ function GameContent() {
                 <li>Prize pool betting for all players</li>
                 <li>Gift coins to other players</li>
                 <li>$0 players are eliminated</li>
-                <li>Discord sign-in & profile customization</li>
+                <li>Discord sign-in & profile menu account switching</li>
                 <li>Mobile-responsive design</li>
               </ul>
+              
+              <button 
+                className="w-full mt-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-brand-primary/20 transition-all transition-colors"
+                onClick={() => {
+                  // Link will be added later
+                  console.log("View Changelog clicked");
+                }}
+              >
+                View Changelog
+              </button>
             </div>
           </div>
         )}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User, Check, ShieldCheck } from 'lucide-react'
+import { X, User, Check, ShieldCheck, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useGameStore } from '@/store/gameStore'
 
@@ -12,7 +12,7 @@ interface EditProfileModalProps {
 const AVATAR_LIBRARY = ['🥷', '🐲', '🦾', '🔥', '🎲', '🎭', '🍀', '💎', '🚀', '🃏']
 
 export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => {
-  const { user, guestUser, updateProfile } = useAuthStore()
+  const { user, guestUser, updateProfile, guestLogout } = useAuthStore()
   const currentDisplayName = user?.user_metadata.full_name || guestUser?.displayName || ''
   const currentAvatar = user?.user_metadata.avatar_url || (guestUser as any)?.avatarUrl || '🎲'
   
@@ -71,8 +71,8 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
             </div>
 
             <div className="p-8 space-y-8">
-              {/* Discord Badge */}
-              {user && (
+              {/* Account Status */}
+              {user ? (
                 <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
@@ -80,20 +80,47 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Connected Account</div>
-                      <div className="text-white font-bold">DISCORD: <span className="text-indigo-300">{discordUsername || 'Verified'}</span></div>
+                      <div className="text-white font-bold text-sm truncate max-w-[150px]">DISCORD: <span className="text-indigo-300">{discordUsername || 'Verified'}</span></div>
                     </div>
                   </div>
                   <button
                     onClick={async () => {
+                      const { disconnect } = useGameStore.getState();
+                      disconnect();
                       await useAuthStore.getState().signOut();
                       onClose();
                     }}
-                    className="px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/5"
+                    className="px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/5 flex items-center gap-2"
                   >
+                    <LogOut size={12} />
                     Sign Out
                   </button>
                 </div>
-              )}
+              ) : guestUser ? (
+                <div className="bg-slate-800/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center">
+                      <User className="text-slate-400" size={20} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Temporary Session</div>
+                      <div className="text-white font-bold uppercase tracking-tight text-sm">Guest Account</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const { disconnect } = useGameStore.getState();
+                      disconnect();
+                      guestLogout();
+                      onClose();
+                    }}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+                  >
+                    <LogOut size={12} />
+                    Switch to Discord
+                  </button>
+                </div>
+              ) : null}
 
               {/* Avatar Selection */}
               <div className="space-y-4">

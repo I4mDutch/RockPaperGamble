@@ -42,6 +42,14 @@ export default class Server implements Party.Server {
       currentDuel: null,
       createdAt: Date.now()
     }
+
+    setInterval(() => {
+      try {
+        this.tick()
+      } catch (err) {
+        console.error('Tick error:', err)
+      }
+    }, 1000)
   }
 
   private addEvent(event: any) {
@@ -76,39 +84,197 @@ export default class Server implements Party.Server {
     const len = this.session.turnOrder.length
     if (!len) return
 
-    for (let i = 1; i <= len; i++) {
-      const nextIndex = (this.session.activePlayerIndex + i) % len
-      const nextId = this.session.turnOrder[nextIndex]
+    for (let i = 0; i < len; i++) {
+      this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % len
+      const nextId = this.session.turnOrder[this.session.activePlayerIndex]
       const nextPlayer = this.getPlayer(nextId)
       if (nextPlayer && nextPlayer.coins > 0) {
-        this.session.activePlayerIndex = nextIndex
         return
       }
     }
   }
 
-  private applyBetPayouts(winnerId: string) {
+  private startRPSRound() {
+    this.session.phase = 'RPS_ROUND'
+    this.session.timeLeft = 15
+    this.broadcastSync()
+  }
+
+  private startNewRound() {
+    this.session.roundNumber++
+    this.session.phase = 'CHALLENGE_SELECT'
+    this.session.timeLeft = 15
+    this.updateRolesForChallengeSelect()
+    this.session.currentDuel = null
+    this.session.currentDuelId = null
+    this.broadcastSync()
+  }
+
+  private tick() {
+    // Allow countdown to run even in lobby status
+    if (this.session.countdown !== undefined) {
+      if (this.session.countdown > 0) {
+        this.session.countdown--
+        this.broadcastSync()
+      } else {
+        this.session.countdown = undefined
+        this.session.status = 'in_progress'
+        this.startNewRound()
+      }
+      return
+    }
+
+    if (this.session.status !== 'in_progress') return
+
+    if (this.session.timeLeft > 0) {
+      this.session.timeLeft--
+      if (this.session.timeLeft === 0) {
+        this.handlePhaseTimeout()
+      }
+      this.broadcastSync()
+    }
+  }
+
+  private handlePhaseTimeout() {
+    switch (this.session.phase) {
+      case 'BETTING':
+        this.startRPSRound()
+        break
+      case 'RPS_ROUND':
+        this.handleRPSRoundTimeout()
+        break
+      case 'RESULTS':
+        this.advanceToNextActivePlayer()
+        this.startNewRound()
+        break
+    }
+  }
+
+  private handleRPSRoundTimeout() {
     const duel = this.session.currentDuel
     if (!duel) return
 
+    // If duel is already finished, phase timeout should have been handled by startNewRound via RESULTS
+    if (duel.status === 'finished') return
+
+    const lastRound = duel.rounds[duel.rounds.length - 1]
+    
+    // If we have a winner (either from resolveRPS or a previous timeout), move to next weapon pick
+    if (lastRound && lastRound.winner) {
+      this.session.timeLeft = 15
+      duel.rounds.push({
+        roundNumber: duel.rounds.length + 1,
+        winner: undefined
+      })
+      this.broadcastSync()
+      return
+    }
+
+    // If timeout reached without choices, force a tie
+    if (!lastRound) {
+      duel.rounds.push({
+        roundNumber: 1,
+        winner: 'tie',
+        resolvedAt: Date.now()
+      })
+    } else {
+      lastRound.winner = 'tie'
+      lastRound.resolvedAt = Date.now()
+    }
+    this.session.timeLeft = 3
+    this.broadcastSync()
+  }
+
+  private resolveRPS(round: any) {
+    const duel = this.session.currentDuel
+    if (!duel) return
+
+    const c1 = round.challengerChoice
+    const c2 = round.challengeeChoice
+
+    if (c1 === c2) {
+      round.winner = 'tie'
+    } else if (
+      (c1 === 'rock' && c2 === 'scissors') ||
+      (c1 === 'paper' && c2 === 'rock') ||
+      (c1 === 'scissors' && c2 === 'paper')
+    ) {
+      round.winner = duel.challengerId
+      duel.seriesScore[duel.challengerId]++
+    } else {
+      round.winner = duel.challengeeId
+      duel.seriesScore[duel.challengeeId]++
+    }
+
+    round.resolvedAt = Date.now()
+
+    // Check for match winner (BO5 = 3 wins)
+    if (round.winner !== 'tie' && duel.seriesScore[round.winner] >= 3) {
+      this.resolveDuel(round.winner)
+    } else {
+      // 3 second result reveal then handleRPSRoundTimeout will trigger next pick
+      this.session.timeLeft = 3
+    }
+  }
+
+  private resolveDuel(winnerId: string) {
+    const duel = this.session.currentDuel
+    if (!duel) return
+
+    duel.status = 'finished'
+    duel.winnerId = winnerId
+    const loserId = winnerId === duel.challengerId ? duel.challengeeId : duel.challengerId
+
+    const totalPool = duel.bets.reduce((sum: number, b: any) => sum + b.amount, 0)
+    const winner = this.getPlayer(winnerId)
+    const loser = this.getPlayer(loserId)
+
+    if (winner) {
+      winner.coins += totalPool
+      winner.stats.wins++
+      winner.stats.totalEarned += totalPool
+      winner.stats.totalWon += totalPool
+      winner.stats.winStreak++
+      
+      // Set payout for winner's wager
+      const winnerBet = duel.bets.find((b: any) => b.playerId === winnerId)
+      if (winnerBet) {
+        winnerBet.payout = totalPool - winnerBet.amount
+      }
+    }
+
+    if (loser) {
+      loser.stats.losses++
+      loser.stats.winStreak = 0
+      
+      // Set payout for loser's wager
+      const loserBet = duel.bets.find((b: any) => b.playerId === loserId)
+      if (loserBet) {
+        loserBet.payout = -loserBet.amount
+      }
+    }
+
+    // Spectator payouts
     for (const bet of duel.bets) {
       const bettor = this.getPlayer(bet.playerId)
-      if (!bettor) continue
+      if (!bettor || bet.playerId === winnerId || bet.playerId === loserId) continue
 
-      let payout = 0
       if (bet.targetId === winnerId) {
-        payout = bet.amount * 2
-      }
-
-      bettor.coins += payout
-      bet.payout = payout - bet.amount
-      if (payout > 0) {
-        bettor.stats.totalEarned += payout
-        bettor.stats.totalWon += payout
+        const reward = bet.amount * 2
+        bettor.coins += reward
+        bet.payout = reward - bet.amount
+        bettor.stats.totalEarned += reward
+        bettor.stats.totalWon += reward
       } else {
+        bet.payout = -bet.amount
         bettor.stats.totalLost += bet.amount
       }
     }
+
+    this.addEvent({ type: 'win', playerId: winnerId, playerName: winner?.displayName, message: `${winner?.displayName} won the match and ${totalPool.toLocaleString()} coins!` })
+    
+    this.session.phase = 'RESULTS'
+    this.session.timeLeft = 8
   }
 
   broadcastSync() {
@@ -198,6 +364,9 @@ export default class Server implements Party.Server {
       } else if (msg.type === 'UPDATE_SETTINGS') {
         if (this.session.hostId !== userId) return this.sendError(sender, 'Only host can update settings')
         this.session.settings = { ...this.session.settings, ...msg.settings }
+        if (msg.settings.startingMoney !== undefined) {
+          for (const p of this.session.players) p.coins = msg.settings.startingMoney
+        }
         this.broadcastSync()
       } else if (msg.type === 'REORDER_PLAYERS') {
         if (this.session.hostId !== userId) return this.sendError(sender, 'Only host can reorder players')
@@ -205,28 +374,24 @@ export default class Server implements Party.Server {
         this.broadcastSync()
       } else if (msg.type === 'START_GAME') {
         if (this.session.hostId !== userId) return this.sendError(sender, 'Only host can start the game')
-        this.session.status = 'in_progress'
-        this.session.phase = 'CHALLENGE_SELECT'
-        this.session.currentDuel = null
-        this.session.currentDuelId = null
-        this.session.roundNumber = 1
-        this.updateRolesForChallengeSelect()
-        this.addEvent({ type: 'start', playerId: userId, message: 'Match started' })
+        if (this.session.status !== 'lobby') return
+        const allReady = this.session.players.every((p: any) => p.status === 'ready')
+        if (!allReady || this.session.players.length < 2) return
+        this.addEvent({ type: 'start', playerId: userId, message: 'Match starting!' })
+        this.session.countdown = 3
         this.broadcastSync()
       } else if (msg.type === 'SELECT_CHALLENGER') {
         if (this.session.phase !== 'CHALLENGE_SELECT') return this.sendError(sender, 'Not in challenge selection phase')
-
-        const activePlayerId = this.session.turnOrder[this.session.activePlayerIndex]
-        if (activePlayerId !== userId) return this.sendError(sender, 'It is not your turn to challenge')
-
         const challenger = this.getPlayer(userId)
         const challengee = this.getPlayer(msg.targetId)
-        if (!challenger || !challengee) return this.sendError(sender, 'Invalid challenger or target')
-        if (this.isEliminated(challenger)) return this.sendError(sender, 'You are eliminated and cannot challenge')
-        if (this.isEliminated(challengee)) return this.sendError(sender, 'Target player is eliminated')
-        if (challengee.id === challenger.id) return this.sendError(sender, 'You cannot challenge yourself')
+        if (!challenger || !challengee || challenger.id === challengee.id) return
+        const wager = Number(msg.amount) || 0
+        if (challenger.coins < wager || challengee.coins < wager) return
 
-        this.session.currentDuelId = `${Date.now()}_${challenger.id}_${challengee.id}`
+        challenger.coins -= wager
+        challengee.coins -= wager
+
+        this.session.currentDuelId = `duel_${Date.now()}`
         this.session.currentDuel = {
           id: this.session.currentDuelId,
           challengerId: challenger.id,
@@ -234,95 +399,86 @@ export default class Server implements Party.Server {
           rounds: [],
           seriesScore: { [challenger.id]: 0, [challengee.id]: 0 },
           targetWins: 3,
-          status: 'betting',
-          bets: [],
+          status: 'active',
+          bets: wager > 0 ? [
+            { playerId: challenger.id, targetId: challenger.id, amount: wager, placedAt: Date.now(), locked: true },
+            { playerId: challengee.id, targetId: challengee.id, amount: wager, placedAt: Date.now(), locked: true }
+          ] : [],
           startedAt: Date.now()
         }
         this.session.phase = 'BETTING'
         this.session.timeLeft = 20
-
         challenger.role = 'challenger'
         challengee.role = 'challengee'
-        for (const p of this.session.players) {
-          if (p.id !== challenger.id && p.id !== challengee.id) p.role = 'spectator'
-        }
+        
+        const eventMessage = wager > 0 
+          ? `${challenger.displayName} challenged ${challengee.displayName} for ${wager.toLocaleString()} 🪙`
+          : `${challenger.displayName} challenged ${challengee.displayName}`
 
-        this.addEvent({ type: 'bet', playerId: userId, playerName: challenger.displayName, message: `${challenger.displayName} challenged ${challengee.displayName}` })
+        this.addEvent({ 
+          type: 'bet', 
+          playerId: userId, 
+          playerName: challenger.displayName, 
+          message: eventMessage
+        })
         this.broadcastSync()
       } else if (msg.type === 'PLACE_BET') {
-        if (!this.session.currentDuel || !['BETTING', 'RPS_ROUND'].includes(this.session.phase)) {
-          return this.sendError(sender, 'No active duel for betting')
-        }
-
-        const bettor = this.getPlayer(userId)
-        if (!bettor) return this.sendError(sender, 'Player not found')
-        if (this.isEliminated(bettor)) return this.sendError(sender, 'Eliminated players cannot place bets')
-
-        const amount = Number(msg.amount)
-        if (!Number.isFinite(amount) || amount <= 0) return this.sendError(sender, 'Bet amount must be greater than 0')
-        if (!this.canAfford(bettor, amount)) return this.sendError(sender, 'Insufficient coins for this bet')
-
-        const duel = this.session.currentDuel
+        if (!this.session.currentDuel || this.session.phase !== 'BETTING') return
+        const p = this.getPlayer(userId)
         const target = this.getPlayer(msg.targetId)
-        if (!target || (target.id !== duel.challengerId && target.id !== duel.challengeeId)) {
-          return this.sendError(sender, 'Bet target must be one of the duelists')
-        }
-
-        const existingBet = duel.bets.find((b: any) => b.playerId === userId)
-        if (existingBet) return this.sendError(sender, 'You already placed a bet this duel')
-
-        bettor.coins -= amount
-        bettor.stats.totalWagered += amount
-
-        duel.bets.push({
+        if (!p || !target || p.coins < msg.amount) return
+        
+        p.coins -= msg.amount
+        this.session.currentDuel.bets.push({
           playerId: userId,
-          targetId: target.id,
-          amount,
+          targetId: msg.targetId,
+          amount: msg.amount,
           placedAt: Date.now(),
           locked: true
         })
+        
+        this.addEvent({
+          type: 'bet',
+          playerId: userId,
+          playerName: p.displayName,
+          message: `${p.displayName} bet ${msg.amount.toLocaleString()} 🪙 on ${target.displayName}`
+        })
+        this.broadcastSync()
+      } else if (msg.type === 'LOCK_CHOICE') {
+        if (this.session.phase !== 'RPS_ROUND' || !this.session.currentDuel) return
+        const duel = this.session.currentDuel
+        let round = duel.rounds[duel.rounds.length - 1]
+        
+        if (!round || round.winner) {
+          round = { roundNumber: duel.rounds.length + 1, winner: undefined }
+          duel.rounds.push(round)
+        }
+        
+        if (userId === duel.challengerId) round.challengerChoice = msg.choice
+        else if (userId === duel.challengeeId) round.challengeeChoice = msg.choice
 
-        this.addEvent({ type: 'bet', playerId: userId, playerName: bettor.displayName, targetId: target.id, targetName: target.displayName, amount, message: `${bettor.displayName} bet ${amount} on ${target.displayName}` })
-
+        if (round.challengerChoice && round.challengeeChoice) {
+          this.resolveRPS(round)
+        }
         this.broadcastSync()
       } else if (msg.type === 'GIFT_COINS') {
         const fromPlayer = this.getPlayer(userId)
         const toPlayer = this.getPlayer(msg.targetId)
         const amount = Number(msg.amount)
-
-        if (!fromPlayer || !toPlayer) return this.sendError(sender, 'Invalid gift source or target')
-        if (fromPlayer.id === toPlayer.id) return this.sendError(sender, 'You cannot gift coins to yourself')
-        if (!Number.isFinite(amount) || amount <= 0) return this.sendError(sender, 'Gift amount must be greater than 0')
-        if (!this.canAfford(fromPlayer, amount)) return this.sendError(sender, 'Insufficient coins to gift')
-
-        fromPlayer.coins -= amount
-        toPlayer.coins += amount
-        fromPlayer.stats.totalLost += amount
-        toPlayer.stats.totalEarned += amount
-
-        if (this.isEliminated(fromPlayer)) {
-          this.addEvent({ type: 'gift', playerId: fromPlayer.id, message: `${fromPlayer.displayName} has been eliminated` })
+        if (fromPlayer && toPlayer && fromPlayer.coins >= amount) {
+          fromPlayer.coins -= amount
+          toPlayer.coins += amount
+          this.addEvent({
+            type: 'gift',
+            playerId: userId,
+            playerName: fromPlayer.displayName,
+            message: `${fromPlayer.displayName} gifted ${amount.toLocaleString()} 🪙 to ${toPlayer.displayName}`
+          })
+          this.broadcastSync()
         }
-        if (!this.isEliminated(toPlayer)) {
-          this.addEvent({ type: 'gift', playerId: toPlayer.id, message: `${toPlayer.displayName} is back in play` })
-        }
-
-        this.addEvent({
-          type: 'gift',
-          playerId: fromPlayer.id,
-          playerName: fromPlayer.displayName,
-          targetId: toPlayer.id,
-          targetName: toPlayer.displayName,
-          amount,
-          message: `${fromPlayer.displayName} gifted ${amount} coins to ${toPlayer.displayName}`
-        })
-
-        this.broadcastSync()
       } else if (msg.type === 'FORCE_SYNC') {
         this.broadcastSync()
       }
-    } catch (_error) {
-      // Ignore malformed messages.
-    }
+    } catch (_error) {}
   }
 }
