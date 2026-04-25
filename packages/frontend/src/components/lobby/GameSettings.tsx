@@ -24,7 +24,6 @@ export function calculateModifiers(startingMoney: number): { lossModifier: numbe
 export function GameSettings({ settings, onSettingsChange, isHost }: GameSettingsProps) {
   const MIN_MONEY = 100
   const MAX_MONEY = 1000000
-  const DEFAULT_MONEY = 10000
 
   const modifiers = useMemo(() => calculateModifiers(settings.startingMoney), [settings.startingMoney])
 
