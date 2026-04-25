@@ -124,11 +124,10 @@ function GameContent() {
               <button 
                 className="w-full mt-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-brand-primary/20 transition-all transition-colors"
                 onClick={() => {
-                  // Link will be added later
-                  console.log("View Changelog clicked");
+                  window.open("https://github.com/I4mDutch/RockPaperGamble/blob/main/dev/changelog.md", "_blank");
                 }}
               >
-                View Changelog
+                View Full Changelog
               </button>
             </div>
           </div>

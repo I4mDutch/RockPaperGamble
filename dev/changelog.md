@@ -1,24 +1,33 @@
 # Changelog
 
-## [2.2.0-2.2.0.9 (SH3FQR)] - 2026-04-25
+## [2.2.0.10 (SH3FQR)] - 2026-04-25
+*The "Major Polish & Stability" Update*
 
-### Added
-- **Best-of-5 Series:** Matches now follow a Best-of-5 format (first to 3 wins) with persistent series score tracking.
-- **Live Event Feed:** A real-time sidebar feed in the game screen that logs challenges, wagers, spectator bets, and coin gifts.
-- **Improved Ready System:** Players can now click their own player card in the lobby to toggle their ready status.
-- **Guest Logout:** Added a "Switch to Discord" option in the lobby and profile menu for guest users to clear their session and sign in with a permanent account.
+Version 2.2.0.10 (SH3FQR) focuses on modernizing the UI, improving mobile accessibility, and ensuring a balanced, transparent gameplay experience for all players.
 
-### Fixed
-- **WebSocket Stability:** Implemented an "Immediate Handshake" on the server to prevent WebSocket closures during connection.
-- **Handshake Resilience:** Bulletproofed display name and initials processing to handle emojis and special characters without crashing.
-- **Stalled Betting Timer:** Fixed a bug where the countdown would stop during the betting phase; it now advances automatically.
-- **Weapons Desync:** Resolved an issue where player choices weren't being recorded by the server, resulting in forced ties.
-- **Settings Synchronization:** Added an `isEditing` lock to the settings modal to prevent server updates from overwriting user input while typing.
-- **Turn Order Reordering:** Fixed server-side validation that prevented hosts from successfully reordering players in the lobby.
-- **Starting Money Bug:** Fixed an issue where custom starting money settings only applied to new players instead of everyone in the room.
-- **Turn Order Advancement:** Corrected logic to ensure the "Challenger" role passes to the next eligible player after a series match ends.
+### 🌟 New Features
 
-### Changed
-- **UI Cleanup:** Removed redundant "Potential Payout" and "Awaiting results" text from the betting phase for a cleaner look.
-- **Reorder Controls:** Moved reorder arrows to the right of player cards and increased their size for better visibility and usability.
-- **Prize Pool Logic:** Refined betting outcomes so winners take the full pool and correct spectator bets double their money.
+#### UI & Visual Modernization
+- **Modern UI Refresh:** A complete visual overhaul featuring improved spacing, rounded cards, softer shadows, and a cleaner color palette.
+- **Fluid Animations:** Added a new lightweight launch sequence with background fades and logo scaling, along with button press and hover animations.
+- **Mobile-First Design:** Full safe-area support for modern mobile devices and touch-friendly buttons with a minimum 48px tap height.
+- **Animated Wins:** Added a coin win animation that visually updates player balances when they take home the prize pool.
+
+#### Enhanced Gameplay
+- **Best-of-5 Series:** Matches now follow a strategic series format—the first player to reach 3 wins takes the match.
+- **Live Event Feed:** A real-time scrolling feed that logs every match event (joins, challenges, wagers, spectator bets, and gifts) as they happen.
+- **Improved Ready System:** A new lobby flow where all players must "Ready Up" by clicking their player card before a match can begin.
+- **Dynamic Turn Order:** High-visibility turn queue display with active player highlighting and "Next Up" indicators for better match clarity.
+
+#### Custom Lobby Settings
+- **Starting Money Control:** Hosts can now configure starting balances from $100 all the way to $1,000,000.
+- **Adaptive Balance Modifiers:** Automatic game balance logic that adjusts win/loss percentages based on the economy to keep matches fair.
+- **Mobile Gift Menu:** Converted the gifting interaction from a hover state to a tap-toggle for easier use on phones.
+
+### 🛠️ Bug Fixes & Stability
+- **WebSocket Handshake:** Implemented an "Immediate Handshake" on the server to stop WebSocket connections from closing before they were established.
+- **Handshake Resilience:** Made the display name and initials logic bulletproof, allowing for emojis (like 🥷) and special characters without crashing the server.
+- **Timer & Sync Fixes:** Resolved an issue where the betting timer would stall and fixed the "weapons desync" that was causing frequent forced ties.
+- **Settings Sync:** Added an editing lock to the settings modal to prevent server updates from overwriting your typing.
+- **Turn Order Validation:** Fixed a server-side bug that prevented hosts from correctly reordering players in the lobby.
+- **Account Switching:** Guest users can now seamlessly logout and switch to a Discord account directly from the lobby or profile menu.
