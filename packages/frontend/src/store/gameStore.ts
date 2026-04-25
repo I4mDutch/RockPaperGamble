@@ -8,12 +8,12 @@ interface GameState {
   isConnected: boolean
   isConnecting: boolean
   error: string | null
-  
+
   // Actions
   connect: (lobbyId: string, userId: string, displayName: string, avatarUrl?: string, avatarColor?: string, initials?: string) => void
   disconnect: () => void
   createLobby: () => string
-  
+
   // v2.2.0: Game actions
   updateSettings: (settings: Partial<GameSettings>) => void
   reorderPlayers: (newOrder: string[]) => void
@@ -25,6 +25,16 @@ interface GameState {
   sendMessage: (message: object) => void
 }
 
+const normalizePartyKitHost = (rawHost?: string): string => {
+  const fallbackHost = `${window.location.hostname || 'localhost'}:1999`
+  if (!rawHost) return fallbackHost
+
+  return rawHost
+    .trim()
+    .replace(/^(https?:\/\/|wss?:\/\/)/i, '')
+    .replace(/\/$/, '') || fallbackHost
+}
+
 export const useGameStore = create<GameState>((set, get) => ({
   socket: null,
   session: null,
@@ -33,17 +43,18 @@ export const useGameStore = create<GameState>((set, get) => ({
   error: null,
 
   connect: (lobbyId: string, userId: string, displayName: string, avatarUrl?: string, avatarColor?: string, initials?: string) => {
-    const currentSocket = get().socket;
+    const currentSocket = get().socket
     if (currentSocket) {
-      if (currentSocket.room === lobbyId) return;
-      currentSocket.close();
+      if (currentSocket.room === lobbyId) return
+      currentSocket.close()
     }
 
-    set({ isConnecting: true, error: null });
+    const host = normalizePartyKitHost(import.meta.env.VITE_PARTYKIT_HOST)
+    set({ isConnecting: true, isConnected: false, error: null })
 
-    const host = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
     const socket = new PartySocket({
       host,
+      party: 'main',
       room: lobbyId,
       query: {
         userId,
@@ -60,7 +71,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (message.type === 'SYNC') {
           set({ session: message.session })
         } else if (message.type === 'ERROR') {
-          set({ error: message.message })
+          set({ error: message.message, isConnecting: false })
           setTimeout(() => set({ error: null }), 5000)
         }
       } catch (err) {
@@ -69,16 +80,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     })
 
     socket.addEventListener('open', () => {
-      set({ isConnected: true, isConnecting: false })
+      set({ isConnected: true, isConnecting: false, error: null })
       socket.send(JSON.stringify({ type: 'FORCE_SYNC' }))
     })
 
     socket.addEventListener('close', () => {
-      set({ isConnected: false, isConnecting: false, session: null })
+      const { isConnected } = get()
+      set({
+        isConnected: false,
+        isConnecting: false,
+        session: null,
+        error: isConnected ? null : `Unable to connect to lobby at ${host}`
+      })
     })
 
     socket.addEventListener('error', () => {
-      set({ isConnected: false, isConnecting: false, error: 'Connection error' })
+      set({
+        isConnected: false,
+        isConnecting: false,
+        session: null,
+        error: `Connection error while trying ${host}`
+      })
     })
 
     set({ socket })

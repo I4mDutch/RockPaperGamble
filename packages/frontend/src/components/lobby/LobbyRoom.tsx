@@ -136,7 +136,7 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
       </div>
 
       <GameSettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
-      <GameCountdown />
+      {session.countdown !== undefined && <GameCountdown seconds={session.countdown} onComplete={() => {}} />}
     </div>
   )
 }

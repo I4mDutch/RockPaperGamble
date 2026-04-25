@@ -11,6 +11,7 @@ interface AuthState {
   setGuestUser: (name: string) => void
   setSession: (session: Session | null) => void
   signOut: () => Promise<void>
+  guestLogout: () => void
   initialize: () => Promise<void>
   updateProfile: (updates: { displayName?: string; avatarUrl?: string }) => Promise<void>
 }
@@ -31,6 +32,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await supabase.auth.signOut()
     localStorage.removeItem('rpg_guest')
     set({ user: null, session: null, guestUser: null, loading: false })
+  },
+  guestLogout: () => {
+    localStorage.removeItem('rpg_guest')
+    set({ guestUser: null, loading: false })
   },
   updateProfile: async (updates) => {
     const { user, guestUser } = get()

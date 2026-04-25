@@ -176,12 +176,8 @@ export const BettingPhase = () => {
               You bet <span className="text-brand-accent">{myBet.amount} 🪙</span> on {session.players.find(p => p.id === myBet.targetId)?.displayName}
             </p>
           </div>
-        )}
-        
-        <p className="text-center text-xs font-bold text-slate-600 uppercase tracking-widest">
-          {hasBet ? 'Awaiting the duel results' : (isSpectator ? 'Choose your champion' : 'Prove your confidence')} • Potential Payout: {betAmount * 2} 🪙
-        </p>
-      </div>
-    </div>
-  )
-}
+          )}
+          </div>
+          </div>
+          )
+          }

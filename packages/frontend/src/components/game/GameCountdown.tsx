@@ -7,23 +7,17 @@ interface GameCountdownProps {
 }
 
 export const GameCountdown = ({ seconds = 3, onComplete }: GameCountdownProps) => {
-  const [currentNumber, setCurrentNumber] = useState(seconds)
   const [showGo, setShowGo] = useState(false)
 
   useEffect(() => {
-    if (currentNumber > 0) {
-      const timer = setTimeout(() => {
-        setCurrentNumber(currentNumber - 1)
-      }, 800)
-      return () => clearTimeout(timer)
-    } else if (!showGo) {
+    if (seconds === 0 && !showGo) {
       setShowGo(true)
       const timer = setTimeout(() => {
         onComplete()
       }, 800)
       return () => clearTimeout(timer)
     }
-  }, [currentNumber, showGo, onComplete])
+  }, [seconds, showGo, onComplete])
 
   const numberVariants = {
     initial: { scale: 0.5, opacity: 0 },
@@ -70,14 +64,14 @@ export const GameCountdown = ({ seconds = 3, onComplete }: GameCountdownProps) =
               </p>
               <AnimatePresence mode="wait">
                 <motion.span
-                  key={currentNumber}
+                  key={seconds}
                   variants={numberVariants}
                   initial="initial"
                   animate="animate"
                   exit="exit"
                   className="font-black italic text-8xl text-brand-primary"
                 >
-                  {currentNumber}
+                  {seconds}
                 </motion.span>
               </AnimatePresence>
             </motion.div>

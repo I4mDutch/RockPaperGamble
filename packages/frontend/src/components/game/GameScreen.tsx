@@ -3,7 +3,8 @@ import { ChallengeSelector } from './ChallengeSelector'
 import { BettingPhase } from './BettingPhase'
 import { RPSDuel } from './RPSDuel'
 import { ResultsPhase } from './ResultsPhase'
-import { Trophy, TrendingUp } from 'lucide-react'
+import { EventFeed } from './EventFeed'
+import { Trophy } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 
 export const GameScreen = () => {
@@ -32,7 +33,7 @@ export const GameScreen = () => {
 
   return (
     <div className="w-full min-h-screen flex flex-col lg:flex-row gap-8 p-6 lg:p-12 bg-slate-900 overflow-x-hidden">
-      {/* Sidebar: Leaderboard & Stats */}
+      {/* Sidebar: Leaderboard & Events */}
       <aside className="w-full lg:w-80 flex flex-col gap-6 order-2 lg:order-1">
         <div className="bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-white/5 p-6 space-y-6">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
@@ -52,15 +53,7 @@ export const GameScreen = () => {
           </div>
         </div>
 
-        <div className="bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-white/5 p-6 space-y-4">
-          <div className="flex items-center gap-3 text-slate-400">
-            <TrendingUp size={16} />
-            <span className="text-xs font-black uppercase tracking-widest">Global Pool</span>
-          </div>
-          <p className="text-3xl font-black text-white italic tracking-tighter">
-            {session.players.reduce((acc, p) => acc + p.coins, 0).toLocaleString()} <span className="text-brand-accent text-xl">🪙</span>
-          </p>
-        </div>
+        <EventFeed events={session.eventFeed} />
       </aside>
 
       {/* Main Game Area */}
