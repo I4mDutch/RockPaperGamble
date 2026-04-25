@@ -26,7 +26,7 @@ export const GameCountdown = ({ seconds = 3, onComplete }: GameCountdownProps) =
       opacity: [0, 1, 0],
       transition: {
         duration: 0.8,
-        ease: "easeInOut",
+        ease: ["easeInOut", "easeInOut"],
         times: [0, 0.4, 1],
       },
     },
@@ -40,7 +40,7 @@ export const GameCountdown = ({ seconds = 3, onComplete }: GameCountdownProps) =
       opacity: [0, 1, 1, 1, 0],
       transition: {
         duration: 0.8,
-        ease: "easeOut",
+        ease: ["easeOut", "easeOut", "easeOut", "easeOut"],
         times: [0, 0.2, 0.5, 0.7, 1],
       },
     },
