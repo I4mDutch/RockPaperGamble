@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, Variants } from 'framer-motion'
 
 interface GameCountdownProps {
   seconds?: number
@@ -19,28 +19,28 @@ export const GameCountdown = ({ seconds = 3, onComplete }: GameCountdownProps) =
     }
   }, [seconds, showGo, onComplete])
 
-  const numberVariants = {
+  const numberVariants: Variants = {
     initial: { scale: 0.5, opacity: 0 },
     animate: {
       scale: [0.5, 1.2, 1.0],
       opacity: [0, 1, 0],
       transition: {
         duration: 0.8,
-        ease: ["easeInOut", "easeInOut"] as const,
+        ease: ["easeInOut", "easeInOut"],
         times: [0, 0.4, 1],
       },
     },
     exit: { opacity: 0 },
   }
 
-  const goVariants = {
+  const goVariants: Variants = {
     initial: { scale: 0.5, opacity: 0 },
     animate: {
       scale: [0.5, 1.3, 1.0, 1.1, 1.0],
       opacity: [0, 1, 1, 1, 0],
       transition: {
         duration: 0.8,
-        ease: ["easeOut", "easeOut", "easeOut", "easeOut"] as const,
+        ease: ["easeOut", "easeOut", "easeOut", "easeOut"],
         times: [0, 0.2, 0.5, 0.7, 1],
       },
     },
