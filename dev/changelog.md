@@ -1,9 +1,9 @@
 # Changelog
 
-## [2.2.0.10 (SH3FQR)] - 2026-04-25
-*The "Major Polish & Stability" Update*
+## [2.2.0.10(c) (N2FTU7)] - 2026-04-26
+*The "Testing & Polish" Update*
 
-Version 2.2.0.10 (SH3FQR) focuses on modernizing the UI, improving mobile accessibility, and ensuring a balanced, transparent gameplay experience for all players.
+Version 2.2.0.10(c) (N2FTU7) focuses on improving mobile accessibility, and ensuring a balanced, transparent gameplay experience for all players.
 
 ### 🌟 New Features
 

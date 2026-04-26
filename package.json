@@ -8,7 +8,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "Custom (RAPIL)",
   "type": "commonjs",
   "workspaces": [
     "packages/*"

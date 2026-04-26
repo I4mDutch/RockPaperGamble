@@ -110,15 +110,14 @@ function GameContent() {
               >
                 ✕
               </button>
-              <h4 className="font-black italic text-brand-primary mb-2 text-responsive-sm">ROCK PAPER GAMBLE V2.2.0</h4>
+              <h4 className="font-black italic text-brand-primary mb-2 text-responsive-sm">ROCK PAPER GAMBLE V2.2.0.10(c)</h4>
               <ul className="text-xs text-slate-400 leading-relaxed space-y-1 list-disc list-inside">
-                <li>Changed "BET ON MYSELF" to "WAGER"</li>
-                <li>Best-of-5 series matches</li>
-                <li>Prize pool betting for all players</li>
-                <li>Gift coins to other players</li>
-                <li>$0 players are eliminated</li>
-                <li>Discord sign-in & profile menu account switching</li>
-                <li>Mobile-responsive design</li>
+                <li>Durable match persistence (no lost lobbies)</li>
+                <li>Fixed "Empty Turn Order" and lobby sync bugs</li>
+                <li>Smoother weapon choice & match flow logic</li>
+                <li>Correct coin rewards for all players</li>
+                <li>Mobile-friendly profile & gift menus</li>
+                <li>Performance & connection stability fixes</li>
               </ul>
               
               <button 
