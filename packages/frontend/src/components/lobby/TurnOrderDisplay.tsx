@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { Crown, ChevronUp, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/common/Avatar'
