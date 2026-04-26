@@ -2,6 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-2.2.0--N2FTU7-brand--primary?style=for-the-badge&logo=github)](https://github.com/I4mDutch/RockPaperGamble/blob/main/dev/changelog.md)
 [![License](https://img.shields.io/badge/license-RAPIL%20(Custom)-red?style=for-the-badge)](./LICENSE.md)
+
 [![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PartyKit](https://img.shields.io/badge/PartyKit-FF4D4D?style=for-the-badge&logo=partykit&logoColor=white)](https://www.partykit.io/)
