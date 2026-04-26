@@ -1,7 +1,7 @@
 import type * as Party from "partykit/server";
 
 // --- CONFIG ---
-const SESSION_KEY = "rpg_v220_final_production"; 
+const SESSION_KEY = "rpg_prod_v220_final_stable"; 
 const DEFAULT_SETTINGS = {
   startingMoney: 10000,
   lossModifier: 0,
@@ -31,7 +31,8 @@ export default class Server implements Party.Server {
 
   constructor(readonly room: Party.Room) {
     this.session = this.createEmptySession();
-    setInterval(() => { this.tick(); }, 1000);
+    // Start global tick loop
+    this.scheduleTick();
   }
 
   createEmptySession() {
@@ -66,6 +67,7 @@ export default class Server implements Party.Server {
       try {
         const saved = await this.room.storage.get(SESSION_KEY);
         if (saved) {
+          // Robust merge
           this.session = {
             ...this.createEmptySession(),
             ...saved,
@@ -79,6 +81,7 @@ export default class Server implements Party.Server {
           await this.save();
         }
         this.isReady = true;
+        console.log(`[STORAGE] Session Live for Room: ${this.room.id}`);
       } catch (err) {
         console.error("[STORAGE] Load failed", err);
         this.session = this.createEmptySession();
@@ -99,6 +102,8 @@ export default class Server implements Party.Server {
   }
 
   broadcastSync() {
+    // GATEKEEPER: Prevent broadcasting uninitialized state
+    if (!this.isReady) return;
     this.room.broadcast(JSON.stringify({ type: "SYNC", session: this.session }));
   }
 
@@ -134,6 +139,7 @@ export default class Server implements Party.Server {
 
   async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
     try {
+      // 1. BLOCK HANDSHAKE until storage is loaded
       await this.ensureLoaded();
 
       const url = new URL(ctx.request.url, "http://localhost");
@@ -144,10 +150,7 @@ export default class Server implements Party.Server {
       if (!userId) { conn.close(); return; }
       conn.setState({ userId });
 
-      if (!this.session.hostId || !this.session.players.some((p: any) => p.id === this.session.hostId)) {
-        this.session.hostId = userId;
-      }
-
+      // 2. IDENTITY INITIALIZATION
       let pIdx = this.session.players.findIndex((p: any) => p.id === userId);
       if (pIdx === -1) {
         this.session.players.push({
@@ -170,14 +173,21 @@ export default class Server implements Party.Server {
         if (avatarUrl) p.avatarUrl = avatarUrl;
       }
 
+      // 3. HOST RECOVERY
+      if (!this.session.hostId || !this.session.players.some((p: any) => p.id === this.session.hostId)) {
+        this.session.hostId = userId;
+      }
+
+      // 4. PERSISTENCE SYNC
       this.syncTurnOrder();
       await this.save();
       
+      // 5. EXPLICIT HANDSHAKE
       conn.send(JSON.stringify({ type: "SYNC", session: this.session }));
       this.broadcastSync();
 
     } catch (err) {
-      console.error("[FATAL] onConnect failed", err);
+      console.error("[FATAL] Handshake crash prevented", err);
     }
   }
 
@@ -210,7 +220,13 @@ export default class Server implements Party.Server {
   async onMessage(message: string, sender: Party.Connection) {
     try {
       const msg = JSON.parse(message);
-      const userId = sender.state?.userId;
+      
+      // Resilient identity lookup
+      let userId = sender.state?.userId;
+      if (!userId) {
+        const url = new URL(sender.uri);
+        userId = url.searchParams.get("userId");
+      }
       if (!userId) return;
 
       await this.ensureLoaded();
@@ -220,7 +236,7 @@ export default class Server implements Party.Server {
         if (pIdx !== -1) {
           this.session.players[pIdx].status = msg.ready ? "ready" : "not_ready";
           const p = this.session.players[pIdx];
-          this.addEvent("ready", `${p.displayName} is ${this.session.players[pIdx].status}`, { playerId: userId });
+          this.addEvent("ready", `${p.displayName} is ${p.status}`, { playerId: userId });
           await this.save();
           this.broadcastSync();
         }
@@ -448,7 +464,20 @@ export default class Server implements Party.Server {
     });
   }
 
+  private scheduleTick() {
+    setTimeout(async () => {
+      try {
+        await this.tick();
+      } catch (err) {
+        console.error("[TICK] Error", err);
+      } finally {
+        this.scheduleTick();
+      }
+    }, 1000);
+  }
+
   async tick() {
+    // PROTECT: No ticks until database is loaded
     if (!this.isReady) return;
 
     // Handle Countdown
