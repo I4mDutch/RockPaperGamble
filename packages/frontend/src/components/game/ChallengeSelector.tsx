@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { useAuthStore } from '@/store/authStore'
-import { Swords, Target, Timer, Coins, Gift, Ban } from 'lucide-react'
+import { Swords, Target, Timer, Coins, Gift } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 
 export const ChallengeSelector = () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, LogIn, Swords, Loader2, RefreshCcw, AlertTriangle, Zap } from 'lucide-react'
+import { Plus, LogIn, Loader2, AlertTriangle, Zap } from 'lucide-react'
 import { useGameStore } from '@/store/gameStore'
 
 interface LobbyBrowserProps {
@@ -12,7 +12,6 @@ interface LobbyBrowserProps {
 export const LobbyBrowser = ({ onJoin, isJoining = false, error = null, onRetry }: LobbyBrowserProps) => {
   const [joinCode, setJoinCode] = useState('')
   const [mode, setMode] = useState<'create' | 'join'>('create')
-  const [isShaking, setIsShaking] = useState(false)
   const { createLobby } = useGameStore()
 
   const handleCreate = () => {
@@ -24,15 +23,9 @@ export const LobbyBrowser = ({ onJoin, isJoining = false, error = null, onRetry 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault()
     if (joinCode.length !== 6) {
-      triggerShake()
       return
     }
     if (!isJoining) onJoin(joinCode.toUpperCase())
-  }
-
-  const triggerShake = () => {
-    setIsShaking(true)
-    setTimeout(() => setIsShaking(false), 500)
   }
 
   return (
