@@ -19,20 +19,12 @@ export const ChallengeSelector = () => {
 
   const handleSelect = (targetId: string) => {
     if (!isChallenger || isBroke) return
-    socket?.send(JSON.stringify({
-      type: 'SELECT_CHALLENGER',
-      targetId,
-      amount: 0
-    }))
+    socket?.send(JSON.stringify({ type: 'SELECT_CHALLENGER', targetId, amount: 0 }))
   }
 
   const handleGift = () => {
     if (!giftTarget || giftAmount <= 0) return
-    socket?.send(JSON.stringify({
-      type: 'GIFT_COINS',
-      targetId: giftTarget,
-      amount: giftAmount
-    }))
+    socket?.send(JSON.stringify({ type: 'GIFT_COINS', targetId: giftTarget, amount: giftAmount }))
     setGiftTarget(null)
     setGiftAmount(100)
   }
@@ -42,134 +34,102 @@ export const ChallengeSelector = () => {
   return (
     <div className="w-full max-w-4xl space-y-8 animate-in fade-in zoom-in duration-500">
       <div className="text-center space-y-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-primary/20 text-brand-primary mb-2">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl" style={{ background: 'rgba(124,58,237,0.08)', color: 'var(--color-accent-primary)' }}>
           <Swords size={32} />
         </div>
-        <h2 className="text-4xl font-black text-white italic tracking-tighter">
-          {isBroke ? 'YOU\'RE BROKE' : isChallenger ? 'PICK YOUR OPPONENT' : 'WAITING FOR CHALLENGE'}
+        <h2 className="heading-display text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+          {isBroke ? "YOU'RE BROKE" : isChallenger ? 'PICK YOUR OPPONENT' : 'WAITING FOR CHALLENGE'}
         </h2>
-        <p className="text-slate-400">
-          {isBroke
-            ? 'You have no coins! Ask someone to gift you some.'
-            : isChallenger ? 'Choose who you want to duel in Rock Paper Scissors.' : 'The active player is currently choosing their target.'}
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          {isBroke ? 'You have no coins! Ask someone to gift you some.' : isChallenger ? 'Choose who you want to duel in Rock Paper Scissors.' : 'The active player is currently choosing their target.'}
         </p>
-        <div className="flex items-center justify-center gap-2 text-brand-primary">
-          <Timer size={20} className="animate-pulse" />
-          <span className="text-lg font-black italic">{session.timeLeft}s</span>
+        <div className="flex items-center justify-center gap-2" style={{ color: 'var(--color-accent-primary)' }}>
+          <Timer size={20} className="animate-pulse" /><span className="text-lg font-black">{session.timeLeft}s</span>
         </div>
       </div>
 
-      {/* Gift Coins Modal */}
+      {/* Gift Modal */}
       {giftTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setGiftTarget(null)} />
-          <div className="relative bg-slate-900 border border-white/10 w-full max-w-sm rounded-3xl shadow-2xl p-8 space-y-6">
-            <h3 className="text-2xl font-black text-white italic tracking-tighter text-center">GIFT COINS</h3>
-            <p className="text-slate-400 text-center text-sm">
-              Sending to <span className="text-brand-accent font-bold">{session.players.find(p => p.id === giftTarget)?.displayName}</span>
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setGiftTarget(null)} />
+          <div className="relative w-full max-w-sm rounded-3xl p-8 space-y-6" style={{ background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', boxShadow: '0 24px 64px rgba(0,0,0,0.12)' }}>
+            <h3 className="heading-display text-2xl text-center">Gift Coins</h3>
+            <p className="text-sm text-center" style={{ color: 'var(--color-text-muted)' }}>
+              Sending to <span className="font-bold" style={{ color: 'var(--color-accent-pop)' }}>{session.players.find(p => p.id === giftTarget)?.displayName}</span>
             </p>
             <div className="flex items-center justify-center gap-4">
-              <button 
-                onClick={() => setGiftAmount(Math.max(10, giftAmount - 50))}
-                className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xl font-black transition-all"
-              >-</button>
-              <div className="flex items-center gap-2 bg-slate-800 rounded-2xl px-6 py-3 border border-white/10">
-                <Coins size={20} className="text-yellow-500" />
-                <input
-                  type="number"
-                  value={giftAmount}
-                  onChange={(e) => setGiftAmount(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="w-24 bg-transparent text-2xl font-black text-white text-center outline-none"
-                />
+              <button onClick={() => setGiftAmount(Math.max(10, giftAmount - 50))} className="w-12 h-12 rounded-xl text-xl font-black transition-all" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}>-</button>
+              <div className="flex items-center gap-2 rounded-2xl px-6 py-3" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
+                <Coins size={20} style={{ color: 'var(--color-accent-pop)' }} />
+                <input type="number" value={giftAmount} onChange={(e) => setGiftAmount(Math.max(1, parseInt(e.target.value) || 0))} className="w-24 bg-transparent text-2xl font-black text-center outline-none" style={{ color: 'var(--color-text-primary)' }} />
               </div>
-              <button 
-                onClick={() => setGiftAmount(Math.min(currentPlayer?.coins || 0, giftAmount + 50))}
-                className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xl font-black transition-all"
-              >+</button>
+              <button onClick={() => setGiftAmount(Math.min(currentPlayer?.coins || 0, giftAmount + 50))} className="w-12 h-12 rounded-xl text-xl font-black transition-all" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}>+</button>
             </div>
-            <p className="text-xs text-slate-500 text-center">Your balance: {currentPlayer?.coins.toLocaleString()} 🪙</p>
+            <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>Your balance: {currentPlayer?.coins.toLocaleString()} 🪙</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setGiftTarget(null)}
-                className="flex-1 py-3 bg-slate-800 text-slate-400 font-bold rounded-2xl hover:bg-slate-700 transition-all"
-              >Cancel</button>
-              <button
-                onClick={handleGift}
-                disabled={giftAmount <= 0 || giftAmount > (currentPlayer?.coins || 0)}
-                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white font-black rounded-2xl transition-all flex items-center justify-center gap-2"
-              >
-                <Gift size={18} />
-                Send
+              <button onClick={() => setGiftTarget(null)} className="flex-1 py-3 font-bold rounded-2xl transition-all" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>Cancel</button>
+              <button onClick={handleGift} disabled={giftAmount <= 0 || giftAmount > (currentPlayer?.coins || 0)} className="btn-gradient flex-1 py-3 font-black flex items-center justify-center gap-2">
+                <Gift size={18} /> Send
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {otherPlayers.map((player) => {
           const playerBroke = player.coins <= 0
           return (
-            <div
-              key={player.id}
-              className="relative group"
-            >
-              <button
-                onClick={() => handleSelect(player.id)}
-                disabled={!isChallenger || isBroke || playerBroke}
-                className={`
-                  w-full p-6 rounded-3xl border transition-all duration-300
-                  ${playerBroke
-                    ? 'bg-slate-800/20 border-rose-500/20 opacity-60 cursor-not-allowed'
-                    : isChallenger && !isBroke
-                      ? 'bg-slate-800/40 border-white/5 hover:border-brand-primary/50 hover:scale-[1.02] cursor-pointer' 
-                      : 'bg-slate-800/20 border-white/5 opacity-50 cursor-default'
-                  }
-                `}
+            <div key={player.id} className="relative group">
+              <div
+                className={`w-full h-full relative p-6 rounded-2xl border bg-white/60 backdrop-blur-md transition-all duration-300 flex flex-col items-center justify-center gap-4 ${
+                  playerBroke ? 'opacity-60 border-transparent' : 'border-white/40 hover:shadow-xl hover:shadow-violet-500/10'
+                }`}
               >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <Avatar url={player.avatarUrl} name={player.displayName} size="xl" />
-                    <div className={`absolute -bottom-2 -right-2 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase flex items-center gap-1 ${
-                      playerBroke ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-brand-accent text-slate-900'
-                    }`}>
-                      {playerBroke ? 'BROKE' : `${player.coins.toLocaleString()} 🪙`}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-bold text-lg">{player.displayName}</p>
-                    <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-1">
-                      {playerBroke ? 'Eliminated' : 'Spectator'}
-                    </p>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/5 rounded-full" />
+                  <Avatar url={player.avatarUrl} name={player.displayName} size="xl" color={player.avatarColor} />
+                  <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase flex items-center gap-1 shadow-sm" style={{
+                    background: 'var(--color-bg-page)',
+                    color: 'var(--color-text-primary)',
+                    border: `2px solid ${playerBroke ? 'var(--color-accent-danger)' : 'var(--color-accent-pop)'}`,
+                  }}>
+                    {playerBroke ? 'BROKE' : `${player.coins.toLocaleString()} 🪙`}
                   </div>
                 </div>
-                
-                {isChallenger && !isBroke && !playerBroke && (
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-brand-primary/10 rounded-3xl">
-                    <div className="bg-brand-primary text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-xl">
-                      <Target size={18} />
-                      CHALLENGE
-                    </div>
-                  </div>
-                )}
 
-                {playerBroke && (
-                  <div className="absolute top-3 right-3">
-                    <Ban size={20} className="text-rose-500/50" />
-                  </div>
-                )}
-              </button>
+                <div className="text-center w-full">
+                  <h3 className="heading-display text-xl truncate px-2" style={{ color: 'var(--color-text-primary)' }}>
+                    {player.displayName}
+                  </h3>
+                  <p className="text-xs font-bold tracking-widest uppercase mt-1" style={{ color: playerBroke ? 'var(--color-accent-danger)' : 'var(--color-text-muted)' }}>
+                    {playerBroke ? 'Eliminated' : player.role}
+                  </p>
+                </div>
 
-              {/* Gift button — always visible for anyone with coins */}
-              {!isBroke && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setGiftTarget(player.id); }}
-                  className="absolute top-4 right-4 p-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-2xl transition-all border border-emerald-500/20 flex items-center justify-center shadow-lg active:scale-90"
-                  title="Gift coins"
-                >
-                  <Gift size={20} />
-                </button>
-              )}
+                {/* Actions Row */}
+                <div className="flex items-center justify-center gap-3 w-full mt-2">
+                  {isChallenger && !isBroke && !playerBroke && (
+                    <button
+                      onClick={() => handleSelect(player.id)}
+                      className="btn-gradient flex-1 py-3 text-sm flex items-center justify-center"
+                    >
+                      <Target size={16} className="mr-2" /> CHALLENGE
+                    </button>
+                  )}
+                  
+                  {!isBroke && (
+                    <button
+                      onClick={() => setGiftTarget(player.id)}
+                      className="p-3 rounded-2xl transition-all active:scale-90 bg-white/90 shadow-sm hover:scale-105"
+                      style={{ border: '1px solid rgba(16,185,129,0.15)', color: 'var(--color-accent-success)' }}
+                      title="Gift coins"
+                    >
+                      <Gift size={20} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )
         })}

@@ -6,85 +6,91 @@ import { Avatar } from '../common/Avatar'
 export const ResultsPhase = () => {
   const { session } = useGameStore()
   const { user, guestUser } = useAuthStore()
-
   if (!session) return null
 
   const userId = user?.id || guestUser?.id
   const winnerId = session.currentDuel?.winnerId
   const isTie = winnerId === 'draw'
-  
+
   return (
     <>
-      <style>{styles}</style>
-      <div className="w-full max-w-4xl space-y-12 animate-in zoom-in fade-in duration-700">
-        <div className="text-center space-y-6">
-          <div className={`inline-block px-6 py-2 rounded-full border animate-bounce ${isTie ? 'bg-slate-500/20 border-slate-500/30' : 'bg-brand-accent/20 border-brand-accent/30'}`}>
-            <span className={`font-black tracking-widest uppercase italic ${isTie ? 'text-slate-400' : 'text-brand-accent'}`}>
-              {isTie ? 'NO WINNER - BETS RETURNED' : 'Match Concluded'}
+      <style>{`
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+      `}</style>
+      <div className="w-full max-w-4xl space-y-10 animate-in zoom-in fade-in duration-700">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="inline-block px-5 py-2 rounded-full" style={{ background: isTie ? 'var(--color-bg-surface)' : 'rgba(124,58,237,0.08)', border: `1px solid ${isTie ? 'var(--color-border)' : 'rgba(124,58,237,0.2)'}` }}>
+            <span className="font-bold tracking-widest uppercase text-[10px]" style={{ color: isTie ? 'var(--color-text-muted)' : 'var(--color-accent-primary)' }}>
+              {isTie ? 'NO WINNER — BETS RETURNED' : 'Match Concluded'}
             </span>
           </div>
-          <h2 className="text-8xl font-black italic text-white tracking-tighter uppercase leading-none">
-            {isTie ? 'TIE GAME' : 'RESULTS'}
+          <h2 className="heading-display text-responsive-5xl">
+            {isTie ? 'TIE' : <span className="text-gradient">RESULTS</span>}
           </h2>
-          <div className="flex items-center justify-center gap-3 text-slate-400">
-            <Timer size={20} className="animate-spin-slow" />
-            <span className="text-xl font-black italic uppercase tracking-widest">Next match in {session.timeLeft}s</span>
+          <div className="flex items-center justify-center gap-2.5">
+            <Timer size={16} className="animate-spin-slow" style={{ color: 'var(--color-accent-pop)' }} />
+            <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Next match in {session.timeLeft}s</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Player Results */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {session.players.sort((a, b) => b.coins - a.coins).map((player, idx) => {
             const isMe = player.id === userId
-            
+            const bet = session.currentDuel?.bets.find(b => b.playerId === player.id)
+
             return (
-              <div 
+              <div
                 key={player.id}
-                className={`
-                  group relative overflow-hidden bg-slate-800/40 backdrop-blur-xl rounded-[2.5rem] border p-8 flex items-center justify-between transition-all duration-500
-                  ${isMe ? 'border-brand-accent shadow-[0_0_50px_rgba(255,214,0,0.15)] scale-105 z-10' : 'border-white/5 opacity-80'}
-                `}
+                className="card-modern flex items-center justify-between transition-all duration-500 relative"
+                style={{
+                  borderColor: isMe ? 'rgba(124,58,237,0.3)' : 'var(--color-border)',
+                  transform: isMe ? 'scale(1.02)' : 'none',
+                  opacity: isMe ? 1 : 0.8,
+                }}
               >
-                {/* Animated Background Glow */}
-                {isMe && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-brand-accent/10 to-transparent animate-pulse" />
+                {/* Win/Loss Badge for Duelists */}
+                {(player.role === 'challenger' || player.role === 'challengee') && !isTie && winnerId && (
+                  <div className="absolute -top-3 -right-3 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg z-10" style={{ 
+                    background: winnerId === player.id ? 'var(--color-accent-success)' : 'var(--color-accent-danger)',
+                    color: 'white',
+                    border: '2px solid var(--color-bg-page)'
+                  }}>
+                    {winnerId === player.id ? 'Match Won' : 'Match Loss'}
+                  </div>
                 )}
 
-                <div className="relative z-10 flex items-center gap-6">
-                  <div className="relative">
-                    <div className={`absolute -inset-1 rounded-2xl blur-sm opacity-50 ${isMe ? 'bg-brand-accent' : 'bg-transparent'}`} />
-                    <Avatar url={player.avatarUrl} name={player.displayName} size="xl" className="relative border border-white/10" />
-                    <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-black text-slate-500">
-                      #{idx + 1}
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="relative shrink-0">
+                    <Avatar url={player.avatarUrl} name={player.displayName} size="lg" color={player.avatarColor} />
+                    <div className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-bold" style={{ background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontFamily: '"JetBrains Mono", monospace' }}>
+                      {idx + 1}
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-2xl font-black text-white italic tracking-tighter uppercase">{player.displayName}</p>
-                      {isMe && (
-                        <span className="bg-brand-accent text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest">YOU</span>
-                      )}
+                      <p className="font-bold truncate-safe text-base" style={{ fontFamily: '"Outfit", system-ui, sans-serif', color: 'var(--color-text-primary)' }}>{player.displayName}</p>
+                      {isMe && <span className="pill pill-primary text-[8px]">You</span>}
                     </div>
-                    <p className="text-slate-500 text-sm font-black uppercase tracking-[0.2em] mt-1">{player.role}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{player.role}</p>
                   </div>
                 </div>
 
-                <div className="relative z-10 text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <Coins size={24} className="text-brand-accent" />
-                    <span className="text-4xl font-black text-white italic tracking-tighter">{player.coins.toLocaleString()}</span>
+                <div className="text-right shrink-0 min-w-0">
+                  <div className="flex items-center justify-end gap-2">
+                    <Coins size={16} style={{ color: 'var(--color-accent-pop)' }} />
+                    <span className="text-currency text-xl" style={{ color: 'var(--color-text-primary)' }}>
+                      {player.coins.toLocaleString()}
+                    </span>
                   </div>
-                  {/* Win/Loss Feedback */}
-                  {session.currentDuel?.bets.find(b => b.playerId === player.id) && (
-                    <div className={`text-sm font-black italic mt-1 ${
-                      isTie ? 'text-slate-400' : 
-                      session.currentDuel.bets.find(b => b.playerId === player.id)!.payout! > 0 ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>
-                      {isTie ? 'PUSH (±0)' : (
-                        <>
-                          {session.currentDuel.bets.find(b => b.playerId === player.id)!.payout! > 0 ? '+' : ''}
-                          {session.currentDuel.bets.find(b => b.playerId === player.id)!.payout}
-                        </>
-                      )} 🪙
+                  {bet && (
+                    <div className="text-xs font-bold mt-0.5" style={{
+                      color: isTie ? 'var(--color-text-muted)' : bet.payout! > 0 ? 'var(--color-accent-success)' : 'var(--color-accent-danger)',
+                      fontFamily: '"JetBrains Mono", monospace'
+                    }}>
+                      {isTie ? '±0' : <>{bet.payout! > 0 ? '+' : ''}{bet.payout!.toLocaleString()}</>} 🪙
                     </div>
                   )}
                 </div>
@@ -96,13 +102,3 @@ export const ResultsPhase = () => {
     </>
   )
 }
-
-const styles = `
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.animate-spin-slow {
-  animation: spin-slow 8s linear infinite;
-}
-`

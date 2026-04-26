@@ -1,387 +1,86 @@
-# RockPaperGamble — Version 2.2.0
+# RockPaperGamble — Development Plan (v2.3.0)
 
-## Overview
-Version **2.2.0** focuses on polish, usability, and gameplay balance. The goal is to make the game feel more modern, accessible on mobile devices, and clearer for players during matches.
-
-Key themes:
-
-- UI modernization
-- Mobile usability
-- Turn clarity
-- Game balance systems
-- Transparency through changelogs
-- Improved player interaction
+## Goal
+Modernize the game with a premium "Modernized" UI, perfect mobile scaling, and a deep, highly-configurable Items System.
 
 ---
 
-# Features & Improvements
+## 🟢 Phase 1: UI Reskin & Design System (Priority 1)
+**Goal:** Implement the new visual identity and fix critical UI overflows.
 
-## UI & Visual Updates
-- New launch animation with background fade and logo scaling
-- Modern UI refresh with improved spacing and rounded cards
-- Softer shadows and cleaner color palette
-- Button press animations and hover effects
-- Coin win animation when players win
-- High-stakes mode visual indicators
-- Fixed UI overflow issues
-- Touch-friendly buttons (48px minimum tap height)
-- Safe area support for mobile devices
+### Task 1.1: Design Tokens & Theme
+- **Files:** `packages/frontend/src/index.css`
+- **Action:** Update Tailwind v4 theme for Deep Emerald background (`#0F3F34`) and gradients.
 
-### Launch Animation
-Lightweight startup animation to improve the first impression when the site loads.
+### Task 1.2: Global Components Update
+- **Action:** Implement `.card-modern`, `.btn-gradient`, and `WaveBackground.tsx`.
 
-Behavior:
-- Background fades in
-- Logo scales slightly into place
-- Lobby UI elements appear sequentially
+### Task 1.3: View-Specific Reskin
+- **Action:** Reskin Lobby Browser, Room, and Game Screen.
 
-Guidelines:
-- Animation duration under **800ms**
-- Uses CSS transforms and opacity only
-- Respects reduced-motion accessibility preferences
+### Task 1.4: Overflow & Text Truncation (UI Fix)
+- **Problem:** Long text like "won 100,000 dollars" overflows containers.
+- **Action:** Implement fluid truncation and responsive font-size clamping for large currency values.
 
 ---
 
-## Navigation & Pages
-- Separate **Sign-In** and **Lobby** pages
-- Guest users can logout to connect a Discord account
-- Improved connection error handling
+## 🟡 Phase 2: Mobile & Layout Optimization (Priority 2)
+**Goal:** Perfect responsiveness and touch UX.
 
-Routes:
+### Task 2.1: Fluid Scaling Refinement
+- **Action:** Ensure typography and spacing are safe for 320px devices.
 
-/signin  
-/lobby
-
-Signin Page Layout:
-- Centered card layout
-- Username input
-- Join button
-- Background gradient
-- Decorative rock/paper/scissors icons
+### Task 2.2: Mobile UI Enhancements
+- **Action:** 48px tap targets, safe-area-inset padding, and portrait orientation focus.
 
 ---
 
-## Lobby Improvements
-- Enhanced lobby with player avatars and ready indicators
-- Player money display
-- Host badge indicator
-- Join/leave animations
-- Player ready system (all players must be ready before the game starts)
+## 🔵 Phase 3: Code Cleanup & Bug Fixes (Priority 3)
+**Goal:** Technical debt reduction and fixing broken gameplay systems.
 
-Lobby layout:
+### Task 3.1: CSS Audit & Cleanup
+- **Action:** Remove redundant legacy styles from `App.css`.
 
-Header  
-Player List  
-Game Settings Summary  
-Start Game Button
+### Task 3.2: Betting Logic Fix (Critical Bug)
+- **Problem:** Betting on other players doesn't provide income for correct guesses.
+- **Action:** Debug `gameStore.ts` and server-side win/loss calculation.
 
 ---
 
-## Game Settings System
+## 🟣 Phase 4: Items System & Granular Config (Priority 4)
+**Goal:** Core gameplay expansion with a deeply customizable settings engine.
 
-Accessible through:
+### Task 4.1: Lobby Configuration (Deep Settings)
+- **Feature:** Advanced "Items Settings" panel in Lobby setup.
+- **Functionality:**
+  - Global "Items Enabled" toggle.
+  - **Item-by-Item Configuration**:
+    - Toggle: Enable/Disable individual items.
+    - Price: Custom cost per item.
+    - **Mechanical Tweakables**: Sliders/inputs for item percentages, base penalties, and round counts (e.g., Nuke split %, Bomb loss penalty, Landmine damage).
 
-⚙ Game Settings
+### Task 4.2: Item Inventory & Shop UI
+- **Action:** Create a modernized shop/inventory panel for the game screen.
 
-### Starting Money
-Hosts can configure starting money.
+### Task 4.3: Item Implementation — Atomic Bomb ($3,000*)
+- **Logic:** Target a player for a Best of 3 RPS match.
+- **Configurable Aspects:** Base price, failure penalty amount, and protected minimum balance ($100 default).
 
-Range:
+### Task 4.4: Item Implementation — Nuke ($1,000*)
+- **Logic:** Lobby-voted Representative match.
+- **Configurable Aspects:** Base price, Reward split % (75% default), Rep penalty % (50% default), Voter penalty % (30% default).
 
-$100 → $1,000,000
-
-Default:
-
-$10,000
-
-Input types:
-- Slider
-- Numeric input
-
----
-
-### Balance Modifiers
-
-To prevent gameplay from breaking at extreme money values, modifiers are applied.
-
-| Starting Money | Loss Modifier | Win Modifier |
-|----------------|---------------|--------------|
-| $100–$999 | Lose −50% | Win +35% |
-| $1k–$10k | Normal | Normal |
-| $10k–$100k | Normal | Normal |
-| $100k–$499k | Lose +25% | Win −15% |
-| $500k–$1M | Lose +50% | Win −35% |
-
-UI clearly shows when modifiers are active.
-
-Example:
-
-Starting Money: $500,000  
-High-Stakes Mode Enabled  
-Losses +50%  
-Wins −35%
+### Task 4.5: Item Implementation — Landmine ($500*)
+- **Logic:** Hidden placement on a player during target selection.
+- **Configurable Aspects:** Base price, base penalty amount ($500 default), and percentage penalty for low-balance players.
 
 ---
 
-# Gameplay Improvements
-
-## Turn Order System
-Improves clarity during gameplay.
-
-### Turn Queue Display
-
-Shows player order visually.
-
-Example:
-
-Turn Order  
-1. Alex  
-2. Jamie  
-3. Chris  
-4. You  
-
-The active player is highlighted.
+## Final Checklist
+- [ ] UI is premium and handles large currency values gracefully.
+- [ ] Spectator betting rewards are correctly calculated.
+- [ ] **Lobby settings allow full control over item pricing and internal mechanics.**
+- [ ] All items (Bomb, Nuke, Landmine) respect the custom lobby configurations.
 
 ---
-
-### Next Player Indicator
-
-Displays who will play next after the current turn.
-
-Example:
-
-Next Player: Jamie
-
----
-
-### Host First-Player Selection
-
-Due to bugs encountered when implementing full drag-to-reorder functionality, the host can now **select which player goes first** rather than reordering the entire list.
-
-Behavior:
-- Host chooses a player to start the match
-- That player becomes **Player 1**
-- Remaining players follow in their current lobby order
-
-Example:
-
-Starting Player: Alex  
-
-Turn Order:  
-1. Alex  
-2. Jamie  
-3. Chris  
-4. You  
-
----
-
-### Turn Logic
-
-Turn order is stored as an array.
-
-playerTurnOrder: [id1, id2, id3]
-
-The game cycles through this array during gameplay.
-
----
-
-## Game Countdown
-A short countdown appears before the match begins.
-
-Example:
-
-Game starting in:  
-3  
-2  
-1  
-
-This helps synchronize multiplayer gameplay.
-
----
-
-## Player Statistics
-
-Tracks player performance during matches.
-
-Stats include:
-- Wins
-- Losses
-- Total money won
-- Total money lost
-
-Displayed in a small player info panel.
-
----
-
-## Round History
-
-Displays the last **10 rounds** played.
-
-Example:
-
-Round 3  
-Alex → Rock  
-Jamie → Paper  
-Jamie Wins
-
----
-
-## Game Event Feed
-
-A scrolling feed that shows multiplayer events in real time.
-
-Examples:
-
-Alex joined the lobby  
-Jamie placed a bet  
-Chris won $500  
-
-This helps players understand what is happening during the match.
-
----
-
-## Button Feedback
-
-Improves UI responsiveness.
-
-Includes:
-- Button press animations
-- Hover effects (desktop only)
-- Optional sound feedback (future enhancement)
-
----
-
-# Mobile Optimization
-
-## Responsive Breakpoints
-
-Mobile:  <768px  
-Tablet:  768–1024px  
-Desktop: >1024px  
-
----
-
-## Mobile Improvements
-- Responsive layout across devices
-- Overflow prevention (`max-width:100%`, `overflow-x:hidden`)
-- Flex wrapping for flexible layouts
-- Touch-friendly buttons
-- Gift button interaction converted from hover to tap toggle
-- Safe area support for mobile devices
-
-Gift button behavior:
-
-Tap → open gift menu  
-Tap again → close menu  
-
----
-
-# Error Handling & Stability
-
-Improved error handling with toast notifications.
-
-Examples:
-
-Player disconnected  
-Invalid bet amount  
-Game sync error  
-
-Additional improvements:
-- Better connection failure handling
-- Reduced unnecessary re-renders
-- More stable multiplayer synchronization
-
----
-
-# Changelog System
-
-## Quick Changelog
-
-Shown in the info menu.
-
-Example:
-
-Version 2.2.0
-
-• New animations  
-• Modern lobby UI  
-• Game settings system  
-• Mobile fixes  
-• Turn order improvements  
-• Full changelog viewer  
-
----
-
-## Full Changelog Viewer
-
-Button:
-
-View Full Changelog
-
-Loads data from:
-
-~/Hermes/Projects/Rock Paper Gamble/RPGPublic/changelog.md
-
-The markdown is rendered inside a scrollable modal.
-
-Recommended libraries:
-- marked.js
-- markdown-it
-
----
-
-# Additional Gameplay Features
-
-- Player avatars using colors or initials
-- Countdown animation before games start
-- Coin win animation with animated balance updates
-- Round history panel
-- Multiplayer event feed
-- Ready system for starting matches
-- Guest logout option to connect Discord
-
----
-
-# Performance Improvements
-
-Performance optimizations include:
-
-- Reduced unnecessary React re-renders
-- Optimized CSS and JS bundles
-- Compressed static assets
-- Faster loading times
-- Improved UI responsiveness
-
----
-
-# Version 2.2.0 Goals
-
-This update aims to deliver:
-
-1. A more modern, polished interface
-2. Fully usable mobile gameplay
-3. Clear player turn flow
-4. Balanced gameplay with customizable settings
-5. Transparent version tracking
-6. A more engaging multiplayer experience
-
-Version **2.2.0** should feel like a **major polish update** rather than a small patch.
-
----
-
-# Assets & Notes
-
-Use the following logo file:
-
-~/Hermes/Projects/Rock Paper Gamble/RPGPublic/RPG Logo.png
-
-Website assets should use, **BUT NEVER CHANGE/EDIT**:
-
-assets/logo.png  
-favicon.svg  
-
-Additional implementation notes:
-
-- Build a complete `README.md` for the project
-- Allow guest users to logout and connect a Discord account
-- Guest logout should be optional but available
+*Plan updated: 2026-04-26 (v2.3.2)*

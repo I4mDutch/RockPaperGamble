@@ -9,6 +9,8 @@ import { GameCountdown } from '@/components/game/GameCountdown'
 import { EventFeed } from '@/components/game/EventFeed'
 import { formatMoney } from '@/lib/utils'
 
+import { WaveBackground } from '../ui/WaveBackground'
+
 interface LobbyRoomProps {
   onLeave: () => void
 }
@@ -20,9 +22,12 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
 
   if (!isConnected || isConnecting) {
     return (
-      <div className="text-center space-y-6 p-12 bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl">
-        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-slate-400 font-medium">Connecting to lobby...</p>
+      <div className="text-center space-y-6 p-12 card-modern relative overflow-hidden">
+        <WaveBackground />
+        <div className="relative z-10">
+          <div className="w-10 h-10 border-4 rounded-full animate-spin mx-auto" style={{ borderColor: 'var(--color-border)', borderTopColor: 'var(--color-accent-primary)' }} />
+          <p className="font-medium" style={{ color: 'var(--color-text-muted)' }}>Connecting to lobby...</p>
+        </div>
       </div>
     )
   }
@@ -36,102 +41,144 @@ export const LobbyRoom = ({ onLeave }: LobbyRoomProps) => {
   const allReady = readyCount === session.players.length && session.players.length >= 2
 
   const handleReadyToggle = () => {
-    if (currentPlayer) {
-      setReady(currentPlayer.status !== 'ready')
-    }
+    if (currentPlayer) setReady(currentPlayer.status !== 'ready')
   }
 
   return (
-    <div className="max-w-5xl w-full space-y-6">
+    <div className="max-w-5xl w-full space-y-6 relative">
+      <WaveBackground />
+      {/* Top Bar */}
       <div className="flex items-center justify-between">
-        <button onClick={onLeave} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
-          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span>Exit Lobby</span>
+        <button onClick={onLeave} className="flex items-center gap-2 transition-colors group" style={{ color: 'var(--color-text-muted)' }}>
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="font-semibold uppercase tracking-widest text-[10px]">Exit</span>
         </button>
         <div className="flex items-center gap-3">
           {guestUser && (
-            <button onClick={() => { guestLogout(); onLeave(); }} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-400 hover:text-white bg-slate-800/50 rounded-xl border border-white/5 transition-all">
-              <LogOut size={16} /> <span>Switch to Discord</span>
+            <button onClick={() => { guestLogout(); onLeave(); }} className="flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all" style={{ color: 'var(--color-text-muted)', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
+              <LogOut size={14} /> Switch
             </button>
           )}
-          <div className="bg-slate-800/50 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Lobby Code</span>
-            <span className="text-xl font-black text-brand-accent tracking-widest select-all">{session.id}</span>
+          <div className="px-4 py-2.5 rounded-xl flex items-center gap-3" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
+            <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Code</span>
+            <span className="text-lg font-bold tracking-[0.25em] select-all" style={{ color: 'var(--color-accent-primary)', fontFamily: '"JetBrains Mono", monospace' }}>{session.id}</span>
           </div>
         </div>
       </div>
 
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-white/5 p-8 space-y-6">
+        {/* Players */}
+        <div className="lg:col-span-2 space-y-5">
+          <div className="card-modern space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Users className="text-brand-primary" />
-                <h2 className="text-2xl font-bold text-white">Players ({session.players.length})</h2>
+                <div className="p-2 rounded-lg" style={{ background: 'rgba(124,58,237,0.08)' }}>
+                  <Users size={18} style={{ color: 'var(--color-accent-primary)' }} />
+                </div>
+                <h2 className="heading-display text-lg">Players <span style={{ color: 'var(--color-text-muted)' }}>({session.players.length})</span></h2>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-white/5">
-                <CheckCircle2 size={14} className={allReady ? 'text-emerald-400' : 'text-slate-500'} />
-                <span className={`text-sm font-bold ${allReady ? 'text-emerald-400' : 'text-slate-500'}`}>{readyCount}/{session.players.length} Ready</span>
+              <div className="pill pill-success">
+                <CheckCircle2 size={12} />
+                {readyCount}/{session.players.length} Ready
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Player Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {session.players.map((player) => {
                 const isCurrentUser = player.id === currentUserId
+                const isReady = player.status === 'ready'
                 return (
-                  <div key={player.id} onClick={isCurrentUser ? handleReadyToggle : undefined} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isCurrentUser ? 'cursor-pointer hover:border-brand-primary/50' : ''} ${player.status === 'ready' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-900/50 border-white/5'}`}>
-                    <div className="relative">
+                  <div
+                    key={player.id}
+                    onClick={isCurrentUser ? handleReadyToggle : undefined}
+                    className="card-compact flex items-center gap-3 transition-all"
+                    style={{
+                      cursor: isCurrentUser ? 'pointer' : 'default',
+                      borderColor: isReady ? 'rgba(16,185,129,0.3)' : 'var(--color-border)',
+                      background: isReady ? 'rgba(16,185,129,0.04)' : 'var(--color-bg-page)',
+                    }}
+                  >
+                    <div className="relative shrink-0">
                       <Avatar url={player.avatarUrl} name={player.displayName} size="md" color={player.avatarColor} initials={player.initials} />
-                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 ${player.status === 'ready' ? 'bg-emerald-500 border-slate-900' : 'bg-slate-600 border-slate-900'}`}>
-                        {player.status === 'ready' ? <CheckCircle2 size={12} className="text-white" /> : <Circle size={12} className="text-slate-400" />}
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white" style={{ background: isReady ? 'var(--color-accent-success)' : 'var(--color-border)' }}>
+                        {isReady ? <CheckCircle2 size={10} className="text-white" /> : <Circle size={10} style={{ color: 'var(--color-text-muted)' }} />}
                       </div>
-                      {session.hostId === player.id && <div className="absolute -top-2 -right-2 bg-brand-accent text-slate-900 p-1 rounded-lg"><Crown size={10} fill="currentColor" /></div>}
+                      {session.hostId === player.id && (
+                        <div className="absolute -top-1.5 -right-1.5 p-0.5 rounded-md" style={{ background: 'var(--color-accent-pop)', color: 'white' }}>
+                          <Crown size={8} fill="currentColor" />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`font-bold truncate ${isCurrentUser ? 'text-brand-primary' : 'text-white'}`}>{player.displayName}</p>
-                        {isCurrentUser && <span className="text-[10px] px-1.5 py-0.5 bg-brand-primary/20 text-brand-primary rounded-full font-bold">You</span>}
+                        <p className="font-semibold truncate-safe text-sm" style={{ color: isCurrentUser ? 'var(--color-accent-primary)' : 'var(--color-text-primary)' }}>{player.displayName}</p>
+                        {isCurrentUser && <span className="pill pill-primary text-[8px]">You</span>}
                       </div>
-                      <p className={`text-xs ${player.status === 'ready' ? 'text-emerald-400' : 'text-slate-500'}`}>{player.status === 'ready' ? 'Ready' : 'Not Ready'}</p>
+                      <p className="text-[9px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: isReady ? 'var(--color-accent-success)' : 'var(--color-text-muted)' }}>
+                        {isReady ? 'Ready' : 'Waiting'}
+                      </p>
                     </div>
-                    <div className="text-right text-brand-accent font-black">{formatMoney(player.coins)}</div>
+                    <div className="text-right shrink-0 min-w-0">
+                      <span className="text-currency text-sm" style={{ color: 'var(--color-accent-pop)' }}>{formatMoney(player.coins)}</span>
+                    </div>
                   </div>
                 )
               })}
             </div>
 
+            {/* Ready Button */}
             {currentPlayer && (
-              <button onClick={handleReadyToggle} className={`w-full py-5 rounded-2xl font-black text-lg transition-all active:scale-95 ${currentPlayer.status === 'ready' ? 'bg-emerald-500/30 text-emerald-400 border-2 border-emerald-500/60 hover:bg-emerald-500/40' : 'bg-gradient-to-r from-brand-primary to-red-600 text-white shadow-xl shadow-brand-primary/30 hover:brightness-110'}`}>
-                {currentPlayer.status === 'ready' ? <span className="flex items-center justify-center gap-2"><CheckCircle2 size={24} /> <span>READY!</span></span> : <span className="flex items-center justify-center gap-2 animate-pulse"><Circle size={24} /> <span>CLICK TO READY UP</span></span>}
+              <button
+                onClick={handleReadyToggle}
+                className={`w-full py-4 rounded-xl font-semibold text-base transition-all active:scale-[0.98] ${currentPlayer.status === 'ready' ? '' : 'btn-gradient'}`}
+                style={currentPlayer.status === 'ready' ? { background: 'rgba(16,185,129,0.08)', color: 'var(--color-accent-success)', border: '1px solid rgba(16,185,129,0.2)', fontFamily: '"Outfit", system-ui, sans-serif' } : { fontFamily: '"Outfit", system-ui, sans-serif' }}
+              >
+                <span className="flex items-center justify-center gap-2 uppercase tracking-widest text-sm">
+                  {currentPlayer.status === 'ready' ? <><CheckCircle2 size={20} /> Ready to Gamble</> : <><Circle size={20} className="animate-pulse" /> Ready Up</>}
+                </span>
               </button>
             )}
           </div>
           <TurnOrderDisplay isHost={isHost} onReorder={(newOrder) => reorderPlayers(newOrder)} />
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-slate-800/40 backdrop-blur-xl rounded-3xl border border-white/5 p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Game Settings</h3>
-              {isHost && <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"><Settings size={18} /></button>}
+        {/* Config + Events */}
+        <div className="space-y-5">
+          <EventFeed events={session.eventFeed} />
+          
+          <div className="card-modern space-y-5">
+            <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Match Config</h3>
+              {isHost && (
+                <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg transition-all" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
+                  <Settings size={16} />
+                </button>
+              )}
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm py-2 border-b border-white/5"><span className="text-slate-400">Mode</span><span className="text-brand-primary font-bold">Series (First to 3)</span></div>
-              <div className="flex justify-between items-center text-sm py-2 border-b border-white/5"><span className="text-slate-400">Starting Money</span><span className="text-white font-bold">{formatMoney(session.settings?.startingMoney || 10000)}</span></div>
-              <div className="flex justify-between items-center text-sm py-2 border-b border-white/5"><span className="text-slate-400">Betting</span><span className="text-white font-bold">Match Winner</span></div>
+            <div className="space-y-0">
+              {[
+                ['Mode', <span style={{ color: 'var(--color-accent-primary)' }} className="font-bold text-xs uppercase tracking-wider">Series (3 Wins)</span>],
+                ['Starting', <span className="text-currency text-xs">{formatMoney(session.settings?.startingMoney || 10000)}</span>],
+                ['Wagering', <span className="pill pill-success text-[9px]">Enabled</span>],
+              ].map(([label, value], i) => (
+                <div key={i} className="flex justify-between items-center text-sm py-3" style={{ borderBottom: i < 2 ? '1px solid var(--color-border)' : 'none' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+                  {value}
+                </div>
+              ))}
             </div>
             {isHost ? (
-              <button disabled={!allReady} onClick={startGame} className="w-full py-4 bg-brand-primary hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-2xl transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2">
-                <Play size={20} fill="currentColor" /> {allReady ? 'Start Match' : `Waiting (${readyCount}/${session.players.length})`}
+              <button disabled={!allReady} onClick={startGame} className="btn-gradient w-full py-4">
+                <Play size={18} fill="currentColor" /> {allReady ? 'START MATCH' : `WAITING (${readyCount}/${session.players.length})`}
               </button>
             ) : (
-              <div className="text-center p-4 bg-slate-900/50 rounded-2xl border border-dashed border-white/10">
-                <p className="text-sm text-slate-500 italic">{!allReady ? `Waiting for all players (${readyCount}/${session.players.length})...` : 'All ready! Waiting for host...'}</p>
+              <div className="text-center p-5 rounded-xl" style={{ background: 'var(--color-bg-surface)', border: '1px dashed var(--color-border)' }}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{!allReady ? 'Waiting for players...' : 'Host is starting...'}</p>
               </div>
             )}
           </div>
-          
-          <EventFeed events={session.eventFeed} />
         </div>
       </div>
 

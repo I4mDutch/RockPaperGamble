@@ -21,8 +21,12 @@ export const Avatar = ({ url, name, size = 'md', className = '', color, initials
 
   return (
     <div 
-      className={`shrink-0 flex items-center justify-center overflow-hidden border border-white/10 shadow-inner ${sizeClasses[size]} ${className}`}
-      style={{ backgroundColor: color || '#334155' }}
+      className={`shrink-0 flex items-center justify-center overflow-hidden border border-white/20 shadow-inner ${sizeClasses[size]} ${className}`}
+      style={{ 
+        background: color 
+          ? `linear-gradient(135deg, ${color}, ${color}99)` 
+          : 'linear-gradient(135deg, #475569, #1e293b)' 
+      }}
     >
       {hasImage ? (
         <img
