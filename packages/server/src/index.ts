@@ -95,9 +95,17 @@ export default class Server implements Party.Server {
   }
 
   addEvent(type: string, message: string, data: any = {}) {
-    const event = { id: `ev_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, type, message, timestamp: Date.now(), ...data };
-    this.session.eventFeed.unshift(event);
-    if (this.session.eventFeed.length > 50) this.session.eventFeed = this.session.eventFeed.slice(0, 50);
+    const event = { 
+      id: `ev_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, 
+      type, 
+      message, 
+      timestamp: Date.now(), 
+      ...data 
+    };
+    this.session.eventFeed.push(event);
+    if (this.session.eventFeed.length > 50) {
+      this.session.eventFeed = this.session.eventFeed.slice(-50);
+    }
   }
 
   getPlayer(userId: string) {
@@ -109,6 +117,11 @@ export default class Server implements Party.Server {
     let newOrder = (this.session.turnOrder || []).filter((id: string) => playerIds.includes(id));
     playerIds.forEach((id: string) => { if (!newOrder.includes(id)) newOrder.push(id); });
     this.session.turnOrder = newOrder;
+    
+    // Ensure activePlayerIndex is valid
+    if (this.session.activePlayerIndex >= newOrder.length) {
+      this.session.activePlayerIndex = 0;
+    }
   }
 
   async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
@@ -122,7 +135,9 @@ export default class Server implements Party.Server {
       if (!userId) { conn.close(); return; }
       conn.setState({ userId });
 
-      if (!this.session.hostId || !this.session.players.some((p: any) => p.id === this.session.hostId)) {
+      // Host logic: assign host if none exists or current host is disconnected
+      const currentHost = this.getPlayer(this.session.hostId);
+      if (!this.session.hostId || !currentHost || !currentHost.isConnected) {
         this.session.hostId = userId;
       }
 
@@ -295,7 +310,11 @@ export default class Server implements Party.Server {
     });
     this.addEvent("win", `${winner?.displayName} won the match and ${totalPool} 🪙!`);
     this.session.phase = "RESULTS"; this.session.timeLeft = 8;
-    this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
+    if (this.session.turnOrder.length > 0) {
+      this.session.activePlayerIndex = (this.session.activePlayerIndex + 1) % this.session.turnOrder.length;
+    } else {
+      this.session.activePlayerIndex = 0;
+    }
   }
 
   async tick() {

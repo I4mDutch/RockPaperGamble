@@ -17,12 +17,6 @@ export const TurnOrderDisplay = ({ isHost, onReorder }: TurnOrderDisplayProps) =
     ? session.turnOrder 
     : players.map(p => p.id)
 
-  useEffect(() => {
-    if (!session.turnOrder || session.turnOrder.length === 0) {
-      console.warn('[TurnOrder] session.turnOrder is EMPTY. Falling back to player order.');
-    }
-  }, [session.turnOrder])
-  
   const orderedPlayers = turnOrder
     .map(id => players.find(p => p.id === id))
     .filter(Boolean) as typeof players
