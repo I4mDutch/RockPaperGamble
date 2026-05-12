@@ -1,4 +1,5 @@
 import type * as Party from "partykit/server";
+import { ITEM_REGISTRY } from "./items";
 
 // --- CONFIG ---
 const SESSION_KEY = "rpg_prod_v220_final_stable"; 
@@ -55,6 +56,8 @@ export default class Server implements Party.Server {
       roundNumber: 0,
       timeLeft: 0,
       currentDuel: null,
+      activeItems: [], // Phase 4: Global active items/effects
+      traps: [],       // Phase 4: Placed traps (Landmines)
       createdAt: Date.now()
     };
   }
@@ -160,6 +163,7 @@ export default class Server implements Party.Server {
           avatarColor: getAvatarColor(userId),
           initials: getInitials(displayName),
           coins: this.session.settings.startingMoney,
+          lockedCoins: 0, // Task 5.1: Wager Lock
           isConnected: true,
           status: "not_ready",
           role: "spectator",
@@ -262,6 +266,9 @@ export default class Server implements Party.Server {
           const allReady = this.session.players.every((p: any) => p.status === "ready");
           if (allReady && this.session.players.length >= 2) {
             this.session.countdown = 3;
+            this.session.activeItems = [];
+            this.session.traps = [];
+            this.session.players.forEach((p: any) => p.inventory = []);
             this.addEvent("start", "Match starting!", { playerId: userId });
             await this.save();
             this.broadcastSync();
@@ -275,8 +282,11 @@ export default class Server implements Party.Server {
         const wager = Number(msg.amount) || 0;
         if (challenger.coins < wager || challengee.coins < wager) return;
 
+        // Task 5.1: Lock wager instead of subtracting
         challenger.coins -= wager;
+        challenger.lockedCoins = (challenger.lockedCoins || 0) + wager;
         challengee.coins -= wager;
+        challengee.lockedCoins = (challengee.lockedCoins || 0) + wager;
         
         this.session.currentDuel = {
           id: `duel_${Date.now()}`,
@@ -310,7 +320,10 @@ export default class Server implements Party.Server {
         const target = this.getPlayer(msg.targetId);
         if (!p || !target || p.coins < msg.amount) return;
         
+        // Task 5.1: Lock wager
         p.coins -= msg.amount;
+        p.lockedCoins = (p.lockedCoins || 0) + msg.amount;
+
         this.session.currentDuel.bets.push({
           playerId: userId,
           targetId: msg.targetId,
@@ -351,6 +364,29 @@ export default class Server implements Party.Server {
           await this.save();
           this.broadcastSync();
         }
+      } else if (msg.type === "PURCHASE_ITEM") {
+        const p = this.getPlayer(userId);
+        const item = ITEM_REGISTRY[msg.itemId];
+        if (p && item && p.coins >= item.cost) {
+          p.coins -= item.cost;
+          if (!p.inventory) p.inventory = [];
+          p.inventory.push({ ...item, instanceId: `item_${Date.now()}` });
+          this.addEvent("item", `${p.displayName} purchased ${item.name}`, { playerId: userId });
+          await this.save();
+          this.broadcastSync();
+        }
+      } else if (msg.type === "ACTIVATE_ITEM") {
+        const p = this.getPlayer(userId);
+        if (!p || !p.inventory) return;
+        const itemIdx = p.inventory.findIndex((i: any) => i.instanceId === msg.instanceId);
+        if (itemIdx === -1) return;
+        
+        const item = p.inventory[itemIdx];
+        p.inventory.splice(itemIdx, 1);
+        
+        this.handleItemActivation(userId, item, msg.targetId);
+        await this.save();
+        this.broadcastSync();
       } else if (msg.type === "FORCE_SYNC") {
         this.broadcastSync();
       }
@@ -366,7 +402,19 @@ export default class Server implements Party.Server {
     const c1 = round.challengerChoice;
     const c2 = round.challengeeChoice;
 
-    if (c1 === c2) {
+    // Task 5.2: Presence-Aware Scoring (Point Only)
+    const challenger = this.getPlayer(duel.challengerId);
+    const challengee = this.getPlayer(duel.challengeeId);
+
+    if (challenger && !challenger.isConnected) {
+      round.winner = duel.challengeeId;
+      duel.seriesScore[duel.challengeeId]++;
+      this.addEvent("game", `${challenger.displayName} is offline! Point to ${challengee?.displayName}.`, { playerId: duel.challengeeId });
+    } else if (challengee && !challengee.isConnected) {
+      round.winner = duel.challengerId;
+      duel.seriesScore[duel.challengerId]++;
+      this.addEvent("game", `${challengee.displayName} is offline! Point to ${challenger?.displayName}.`, { playerId: duel.challengerId });
+    } else if (c1 === c2) {
       round.winner = "tie";
     } else if (
       (c1 === "rock" && c2 === "scissors") ||
@@ -381,6 +429,22 @@ export default class Server implements Party.Server {
     }
 
     round.resolvedAt = Date.now();
+
+    // Task 4.3: Landmine Trigger
+    if (this.session.traps && this.session.traps.length > 0) {
+      this.session.traps = this.session.traps.filter((trap: any) => {
+        if (trap.type === "landmine") {
+          const owner = this.getPlayer(trap.ownerId);
+          if (owner) {
+            const payout = trap.config?.payout || 250;
+            owner.coins += payout;
+            this.addEvent("item", `LANDMINE! ${owner.displayName} earned ${payout.toLocaleString()} 🪙 from the duel.`, { playerId: trap.ownerId });
+          }
+          return false; // Trap consumed
+        }
+        return true;
+      });
+    }
 
     if (round.winner !== "tie" && duel.seriesScore[round.winner] >= 3) {
       this.resolveDuel(round.winner);
@@ -401,34 +465,51 @@ export default class Server implements Party.Server {
     const winner = this.getPlayer(winnerId);
     const loser = this.getPlayer(loserId);
 
+    // Resolution: Clear locked coins and apply winnings/losses
     if (winner) {
-      winner.coins += totalPool;
+      winner.lockedCoins = Math.max(0, (winner.lockedCoins || 0) - (duel.bets.find((b: any) => b.playerId === winnerId)?.amount || 0));
+      // Winner gets their own bet back + the total pool of losing bets
+      const loserBetsPool = duel.bets.filter((b: any) => b.targetId === loserId).reduce((sum: number, b: any) => sum + b.amount, 0);
+      
+      winner.coins += (duel.bets.find((b: any) => b.playerId === winnerId)?.amount || 0); // Return wager
+      winner.coins += loserBetsPool; // Winnings
+      
       winner.stats.wins++;
-      winner.stats.totalEarned += totalPool;
-      winner.stats.totalWon += totalPool;
+      winner.stats.totalEarned += loserBetsPool;
+      winner.stats.totalWon += loserBetsPool;
       winner.stats.winStreak++;
       const wBet = duel.bets.find((b: any) => b.playerId === winnerId);
-      if (wBet) wBet.payout = totalPool - wBet.amount;
+      if (wBet) wBet.payout = loserBetsPool;
     }
 
     if (loser) {
+      // Loser's bet is already gone (deducted and locked)
+      loser.lockedCoins = Math.max(0, (loser.lockedCoins || 0) - (duel.bets.find((b: any) => b.playerId === loserId)?.amount || 0));
       loser.stats.losses++;
       loser.stats.winStreak = 0;
       const lBet = duel.bets.find((b: any) => b.playerId === loserId);
-      if (lBet) lBet.payout = -lBet.amount;
+      if (lBet) {
+        lBet.payout = -lBet.amount;
+        loser.stats.totalLost += lBet.amount;
+      }
     }
 
     duel.bets.forEach((b: any) => {
       const bettor = this.getPlayer(b.playerId);
       if (!bettor || b.playerId === winnerId || b.playerId === loserId) return;
 
+      // Clear locked coins for spectators
+      bettor.lockedCoins = Math.max(0, (bettor.lockedCoins || 0) - b.amount);
+
       if (b.targetId === winnerId) {
+        // Task 3.2: 2x payout for correct guesses
         const reward = b.amount * 2;
         bettor.coins += reward;
         b.payout = reward - b.amount;
-        bettor.stats.totalEarned += reward;
-        bettor.stats.totalWon += reward;
+        bettor.stats.totalEarned += reward - b.amount;
+        bettor.stats.totalWon += reward - b.amount;
       } else {
+        // Bet is lost
         b.payout = -b.amount;
         bettor.stats.totalLost += b.amount;
       }
@@ -511,6 +592,73 @@ export default class Server implements Party.Server {
       }
       await this.save();
       this.broadcastSync();
+    }
+  }
+
+  private handleItemActivation(userId: string, item: any, targetId?: string) {
+    const p = this.getPlayer(userId);
+    if (!p) return;
+
+    this.addEvent("item", `${p.displayName} activated ${item.name}!`, { playerId: userId, itemId: item.id });
+
+    switch (item.id) {
+      case "atomic_bomb": {
+        const target = targetId ? this.getPlayer(targetId) : null;
+        if (target) {
+          const steal = Math.floor(target.coins * (item.config?.targetSteal || 0.9));
+          target.coins -= steal;
+          p.coins += steal;
+          this.addEvent("item", `Atomic Bomb: Stole ${steal.toLocaleString()} 🪙 from ${target.displayName}`, { playerId: userId });
+        }
+        // Global steal
+        this.session.players.forEach((pl: any) => {
+          if (pl.id === userId || pl.id === targetId) return;
+          const globalSteal = Math.floor(pl.coins * (item.config?.globalSteal || 0.1));
+          pl.coins -= globalSteal;
+          p.coins += globalSteal;
+        });
+        break;
+      }
+      case "nuke": {
+        const backfire = Math.random() < (item.config?.backfireRisk || 0.25);
+        if (backfire) {
+          const penalty = Math.floor(p.coins * 0.5);
+          p.coins -= penalty;
+          const split = Math.floor(penalty / (this.session.players.length - 1));
+          this.session.players.forEach((pl: any) => {
+            if (pl.id !== userId) pl.coins += split;
+          });
+          this.addEvent("item", `NUKE BACKFIRE! ${p.displayName} lost ${penalty.toLocaleString()} 🪙`, { playerId: userId, type: "danger" });
+        } else {
+          // Success: Take from others
+          this.session.players.forEach((pl: any) => {
+            if (pl.id === userId) return;
+            const take = Math.floor(pl.coins * (item.config?.poolTake || 0.75));
+            pl.coins -= take;
+            p.coins += take;
+          });
+          this.addEvent("item", `NUKE IMPACT! ${p.displayName} absorbed massive wealth.`, { playerId: userId, type: "success" });
+        }
+        break;
+      }
+      case "landmine": {
+        this.session.traps.push({
+          id: `trap_${Date.now()}`,
+          ownerId: userId,
+          type: "landmine",
+          config: item.config
+        });
+        break;
+      }
+      case "interceptor": {
+        this.session.activeItems.push({
+          id: `effect_${Date.now()}`,
+          ownerId: userId,
+          type: "interceptor",
+          expiresAt: Date.now() + 60000 // Lasts 1 minute
+        });
+        break;
+      }
     }
   }
 

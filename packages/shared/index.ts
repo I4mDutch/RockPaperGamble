@@ -9,9 +9,11 @@ export interface Player {
   avatarColor?: string;
   initials?: string;
   coins: number;
+  lockedCoins: number; // Task 5.1: Wager Lock
   isConnected: boolean;
   status: PlayerStatus;
   role: "challenger" | "challengee" | "spectator";
+  inventory?: any[]; // Phase 4: Purchased items
   stats: {
     wins: number;
     losses: number;
@@ -59,6 +61,7 @@ export interface GameEvent {
   targetId?: string;
   targetName?: string;
   message?: string;
+  itemId?: string; // Phase 4
   timestamp: number;
 }
 
@@ -109,6 +112,8 @@ export interface GameSession {
   roundHistory: RoundHistory[];
   eventFeed: GameEvent[];
   countdown?: number;
+  activeItems: any[]; // Phase 4: Global effects
+  traps: any[];       // Phase 4: Placed traps
 }
 
 export function getBalanceModifiers(startingMoney: number): { loss: number; win: number; highStakes: boolean } {

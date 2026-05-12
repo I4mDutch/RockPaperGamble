@@ -39,30 +39,32 @@
   --color-border: rgba(229, 231, 235, 0.5);
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #7C3AED, #06B6D4);
-  --gradient-surface: linear-gradient(135deg, rgba(124, 58, 237, 0.03) 0%, rgba(6, 182, 212, 0.03) 100%);
+  --gradient-primary: linear-gradient(135deg, #0F3F34, #1B5E20); /* Deep Emerald v2.3.0 */
+  --gradient-surface: linear-gradient(135deg, rgba(15, 63, 52, 0.05) 0%, rgba(27, 94, 32, 0.05) 100%);
+  --gradient-gold: linear-gradient(135deg, #F59E0B, #D97706);
 
   /* Shadows */
-  --shadow-card: 0 4px 24px rgba(124, 58, 237, 0.08);
-  --shadow-card-hover: 0 8px 32px rgba(124, 58, 237, 0.14);
-  --shadow-btn: 0 4px 16px rgba(124, 58, 237, 0.25);
-  --shadow-btn-hover: 0 6px 24px rgba(124, 58, 237, 0.35);
+  --shadow-card: 0 4px 24px rgba(15, 63, 52, 0.1);
+  --shadow-card-hover: 0 12px 48px rgba(15, 63, 52, 0.2);
+  --shadow-btn: 0 4px 16px rgba(15, 63, 52, 0.3);
+  --shadow-btn-hover: 0 6px 24px rgba(15, 63, 52, 0.4);
 
   /* Timing */
   --transition-fast: 150ms ease-out;
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 450ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Safe areas */
-  --space-safe-top: env(safe-area-inset-top);
-  --space-safe-bottom: env(safe-area-inset-bottom);
-  --space-safe-left: env(safe-area-inset-left);
-  --space-safe-right: env(safe-area-inset-right);
+  /* Safe areas - Dynamic Fallbacks */
+  --space-safe-top: max(1rem, env(safe-area-inset-top));
+  --space-safe-bottom: max(1rem, env(safe-area-inset-bottom));
+  --space-safe-left: max(1rem, env(safe-area-inset-left));
+  --space-safe-right: max(1rem, env(safe-area-inset-right));
 
   /* Apply base */
   background-color: var(--color-bg-page);
   color: var(--color-text-primary);
   font-family: "Space Grotesk", system-ui, sans-serif;
+  overflow-x: hidden;
 }
 
 @layer base {
@@ -279,26 +281,29 @@ button:hover::after,
    RESPONSIVE TEXT (clamp)
    =========================== */
 
-.text-responsive-xs   { font-size: clamp(0.625rem, 0.5rem + 0.5vw, 0.75rem); }
-.text-responsive-sm   { font-size: clamp(0.75rem, 0.6rem + 0.6vw, 0.875rem); }
-.text-responsive-base { font-size: clamp(0.875rem, 0.75rem + 0.75vw, 1rem); }
-.text-responsive-lg   { font-size: clamp(1rem, 0.8rem + 1vw, 1.25rem); }
-.text-responsive-xl   { font-size: clamp(1.25rem, 0.9rem + 1.5vw, 1.5rem); }
-.text-responsive-2xl  { font-size: clamp(1.5rem, 1rem + 2vw, 2rem); }
-.text-responsive-3xl  { font-size: clamp(1.875rem, 1.2rem + 3vw, 2.5rem); }
-.text-responsive-4xl  { font-size: clamp(2.25rem, 1.5rem + 3.5vw, 3.5rem); }
-.text-responsive-5xl  { font-size: clamp(3rem, 2rem + 5vw, 4.5rem); }
+/* Fluid Scaling Refinement (Task 2.1) */
+.text-responsive-xs   { font-size: clamp(0.7rem, 0.6rem + 0.4vw, 0.8rem); }
+.text-responsive-sm   { font-size: clamp(0.8rem, 0.7rem + 0.5vw, 0.9rem); }
+.text-responsive-base { font-size: clamp(0.95rem, 0.85rem + 0.6vw, 1.1rem); }
+.text-responsive-lg   { font-size: clamp(1.1rem, 0.9rem + 1vw, 1.3rem); }
+.text-responsive-xl   { font-size: clamp(1.3rem, 1rem + 1.5vw, 1.7rem); }
+.text-responsive-2xl  { font-size: clamp(1.6rem, 1.2rem + 2vw, 2.2rem); }
+.text-responsive-3xl  { font-size: clamp(2rem, 1.5rem + 3vw, 3rem); }
+.text-responsive-4xl  { font-size: clamp(2.5rem, 1.8rem + 4vw, 4rem); }
+.text-responsive-5xl  { font-size: clamp(3.5rem, 2.5rem + 6vw, 6rem); }
 
-/* Currency / score — guaranteed safe */
+/* Currency / score — Guaranteed Safe for Mobile (Task 1.4) */
 .text-currency {
-  font-size: clamp(1rem, 3vw, 2.5rem);
-  font-weight: 700;
+  font-size: clamp(1.1rem, 4vw, 2.5rem);
+  font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
   font-family: "JetBrains Mono", monospace;
   font-variant-numeric: tabular-nums;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* Single-line truncate utility */

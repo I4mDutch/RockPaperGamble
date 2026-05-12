@@ -20,6 +20,8 @@ interface GameState {
   setReady: (ready: boolean) => void
   startGame: () => void
   giftCoins: (targetId: string, amount: number) => void
+  purchaseItem: (itemId: string) => void
+  activateItem: (instanceId: string, targetId?: string) => void
   forceSync: () => void
   setError: (error: string | null) => void
   sendMessage: (message: object) => void
@@ -138,6 +140,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   giftCoins: (targetId: string, amount: number) => {
     get().socket?.send(JSON.stringify({ type: 'GIFT_COINS', targetId, amount }))
+  },
+
+  purchaseItem: (itemId: string) => {
+    get().socket?.send(JSON.stringify({ type: 'PURCHASE_ITEM', itemId }))
+  },
+
+  activateItem: (instanceId: string, targetId?: string) => {
+    get().socket?.send(JSON.stringify({ type: 'ACTIVATE_ITEM', instanceId, targetId }))
   },
 
   forceSync: () => {

@@ -7,6 +7,9 @@ import { EventFeed } from './EventFeed'
 import { Trophy } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 import { WaveBackground } from '../ui/WaveBackground'
+import { ItemsShop } from './ItemsShop'
+import { SettingsPanel } from './SettingsPanel'
+import { ThemeOverlay } from './ThemeOverlay'
 
 export const GameScreen = () => {
   const { session } = useGameStore()
@@ -31,8 +34,10 @@ export const GameScreen = () => {
   return (
     <div className="w-full min-h-screen flex flex-col lg:flex-row gap-6 p-4 lg:p-8 overflow-x-hidden relative">
       <WaveBackground />
+      <ThemeOverlay />
       {/* Sidebar */}
       <aside className="w-full lg:w-80 flex flex-col gap-5 order-2 lg:order-1">
+        <ItemsShop />
         <EventFeed events={session.eventFeed} />
         
         <div className="card-modern space-y-5">
@@ -54,7 +59,8 @@ export const GameScreen = () => {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col items-center justify-center order-1 lg:order-2 min-h-[400px]">
+      <main className="flex-1 flex flex-col items-center justify-start gap-6 order-1 lg:order-2 min-h-[400px]">
+        {session.phase === 'WAITING' && <SettingsPanel />}
         {renderPhase()}
       </main>
     </div>
