@@ -41,21 +41,21 @@ export const PlayerStats = ({ playerName, avatarUrl, stats }: PlayerStatsProps) 
         </div>
 
         {/* Total Won */}
-        <div className="bg-slate-700/50 rounded-xl p-3">
-          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">
+        <div className="bg-slate-700/50 rounded-xl p-3 overflow-hidden">
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1 truncate-safe">
             Total Won
           </p>
-          <p className="text-xl font-black text-emerald-400">
+          <p className="text-xl font-black text-emerald-400 text-currency">
             +{stats.totalWon.toLocaleString()}
           </p>
         </div>
 
         {/* Total Lost */}
-        <div className="bg-slate-700/50 rounded-xl p-3">
-          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">
+        <div className="bg-slate-700/50 rounded-xl p-3 overflow-hidden">
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1 truncate-safe">
             Total Lost
           </p>
-          <p className="text-xl font-black text-rose-400">
+          <p className="text-xl font-black text-rose-400 text-currency">
             -{stats.totalLost.toLocaleString()}
           </p>
         </div>

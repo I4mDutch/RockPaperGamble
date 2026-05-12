@@ -41,7 +41,7 @@ export const BettingPhase = () => {
               <Avatar url={challenger.avatarUrl} name={challenger.displayName} size="2xl" className={isChallenger ? 'ring-4 ring-offset-4' : ''} />
               {isChallenger && <div className="absolute -top-3 -right-3 pill pill-primary text-[10px]">YOU</div>}
             </div>
-            <p className="text-responsive-xl font-black tracking-tighter uppercase truncate ml-auto" style={{ color: 'var(--color-text-primary)', fontFamily: '"Outfit",system-ui,sans-serif' }}>{challenger.displayName}</p>
+            <p className="text-responsive-xl font-black tracking-tighter uppercase truncate-safe ml-auto" style={{ color: 'var(--color-text-primary)', fontFamily: '"Outfit",system-ui,sans-serif' }}>{challenger.displayName}</p>
             <p className="text-[10px] font-black uppercase tracking-widest mt-1" style={{ color: 'var(--color-accent-primary)' }}>Challenger</p>
             {challengerWager && (
               <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl animate-pulse" style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', color: 'var(--color-accent-primary)' }}>
@@ -70,7 +70,7 @@ export const BettingPhase = () => {
               <Avatar url={challengee.avatarUrl} name={challengee.displayName} size="2xl" className={isChallengee ? 'ring-4 ring-offset-4' : ''} />
               {isChallengee && <div className="absolute -top-3 -left-3 pill pill-pop text-[10px]">YOU</div>}
             </div>
-            <p className="text-responsive-xl font-black tracking-tighter uppercase truncate" style={{ color: 'var(--color-text-primary)', fontFamily: '"Outfit",system-ui,sans-serif' }}>{challengee.displayName}</p>
+            <p className="text-responsive-xl font-black tracking-tighter uppercase truncate-safe" style={{ color: 'var(--color-text-primary)', fontFamily: '"Outfit",system-ui,sans-serif' }}>{challengee.displayName}</p>
             <p className="text-[10px] font-black uppercase tracking-widest mt-1" style={{ color: 'var(--color-accent-secondary)' }}>Challengee</p>
             {challengeeWager && (
               <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl animate-pulse" style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', color: 'var(--color-accent-secondary)' }}>
@@ -102,15 +102,15 @@ export const BettingPhase = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {(isSpectator || isChallenger) && (
                 <button onClick={() => handleBet(challenger.id)} className="group relative overflow-hidden py-5 font-black rounded-2xl transition-all active:scale-[0.98]" style={{ background: 'var(--gradient-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }}>
-                  <div className="relative z-10 flex items-center justify-center gap-3 text-lg tracking-tighter" style={{ fontFamily: '"Outfit",system-ui,sans-serif' }}>
-                    <Flame size={22} />{isChallenger ? 'WAGER' : `BET ON ${challenger.displayName.toUpperCase()}`}
+                  <div className="relative z-10 flex items-center justify-center gap-3 text-lg tracking-tighter truncate-safe px-4" style={{ fontFamily: '"Outfit",system-ui,sans-serif' }}>
+                    <Flame size={22} className="shrink-0" />{isChallenger ? 'WAGER' : `BET ON ${challenger.displayName.toUpperCase()}`}
                   </div>
                 </button>
               )}
               {(isSpectator || isChallengee) && (
                 <button onClick={() => handleBet(challengee.id)} className="group relative overflow-hidden py-5 font-black rounded-2xl transition-all active:scale-[0.98]" style={{ background: 'var(--color-accent-pop)', color: 'white', boxShadow: '0 4px 16px rgba(245,158,11,0.25)' }}>
-                  <div className="relative z-10 flex items-center justify-center gap-3 text-lg tracking-tighter" style={{ fontFamily: '"Outfit",system-ui,sans-serif' }}>
-                    <Flame size={22} />{isChallengee ? 'WAGER' : `BET ON ${challengee.displayName.toUpperCase()}`}
+                  <div className="relative z-10 flex items-center justify-center gap-3 text-lg tracking-tighter truncate-safe px-4" style={{ fontFamily: '"Outfit",system-ui,sans-serif' }}>
+                    <Flame size={22} className="shrink-0" />{isChallengee ? 'WAGER' : `BET ON ${challengee.displayName.toUpperCase()}`}
                   </div>
                 </button>
               )}

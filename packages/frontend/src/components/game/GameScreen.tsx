@@ -50,7 +50,7 @@ export const GameScreen = () => {
               <div key={player.id} className="flex items-center gap-3 group">
                 <span className="text-[10px] font-black w-4 shrink-0" style={{ color: idx === 0 ? 'var(--color-accent-pop)' : '#64748b', fontFamily: '"JetBrains Mono", monospace' }}>{idx + 1}</span>
                 <Avatar url={player.avatarUrl} name={player.displayName} size="sm" color={player.avatarColor} />
-                <span className="flex-1 text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>{player.displayName}</span>
+                <span className="flex-1 text-sm font-bold truncate-safe" style={{ color: 'var(--color-text-primary)' }}>{player.displayName}</span>
                 <span className="text-currency text-xs shrink-0" style={{ color: 'var(--color-accent-pop)', fontSize: '0.8rem' }}>{player.coins.toLocaleString()}</span>
               </div>
             ))}

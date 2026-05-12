@@ -34,11 +34,33 @@ export interface Bet {
   payout?: number;
 }
 
+export interface ItemConfig {
+  cost: number;
+  [key: string]: any;
+}
+
 export interface GameSettings {
   startingMoney: number;
   lossModifier: number;
   winModifier: number;
   highStakesMode: boolean;
+  items: {
+    atomic_bomb: ItemConfig & {
+      targetSteal: number;
+      nextSteal: number;
+      globalSteal: number;
+    };
+    nuke: ItemConfig & {
+      backfireRisk: number;
+      poolTake: number;
+    };
+    landmine: ItemConfig & {
+      payout: number;
+    };
+    interceptor: ItemConfig & {
+      minSteal: number;
+    };
+  };
 }
 
 export interface RoundHistory {

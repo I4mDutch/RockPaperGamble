@@ -7,7 +7,28 @@ const DEFAULT_SETTINGS = {
   startingMoney: 10000,
   lossModifier: 0,
   winModifier: 0,
-  highStakesMode: false
+  highStakesMode: false,
+  items: {
+    atomic_bomb: {
+      cost: 3000,
+      targetSteal: 0.9,
+      nextSteal: 0.3,
+      globalSteal: 0.1
+    },
+    nuke: {
+      cost: 5000,
+      backfireRisk: 0.25,
+      poolTake: 0.75
+    },
+    landmine: {
+      cost: 250,
+      payout: 250
+    },
+    interceptor: {
+      cost: 1000,
+      minSteal: 200
+    }
+  }
 };
 
 // --- UTILS ---
@@ -43,12 +64,7 @@ export default class Server implements Party.Server {
       players: [],
       status: "lobby",
       phase: "WAITING",
-      settings: {
-        startingMoney: 10000,
-        lossModifier: 0,
-        winModifier: 0,
-        highStakesMode: false
-      },
+      settings: { ...DEFAULT_SETTINGS },
       turnOrder: [],
       activePlayerIndex: 0,
       eventFeed: [],
@@ -366,12 +382,19 @@ export default class Server implements Party.Server {
         }
       } else if (msg.type === "PURCHASE_ITEM") {
         const p = this.getPlayer(userId);
-        const item = ITEM_REGISTRY[msg.itemId];
-        if (p && item && p.coins >= item.cost) {
-          p.coins -= item.cost;
+        const itemStatic = ITEM_REGISTRY[msg.itemId];
+        const itemConfig = (this.session.settings.items as any)?.[msg.itemId];
+
+        if (p && itemStatic && itemConfig && p.coins >= itemConfig.cost) {
+          p.coins -= itemConfig.cost;
           if (!p.inventory) p.inventory = [];
-          p.inventory.push({ ...item, instanceId: `item_${Date.now()}` });
-          this.addEvent("item", `${p.displayName} purchased ${item.name}`, { playerId: userId });
+          p.inventory.push({
+            ...itemStatic,
+            cost: itemConfig.cost,
+            config: { ...itemStatic.config, ...itemConfig },
+            instanceId: `item_${Date.now()}`
+          });
+          this.addEvent("item", `${p.displayName} purchased ${itemStatic.name}`, { playerId: userId });
           await this.save();
           this.broadcastSync();
         }
@@ -467,19 +490,21 @@ export default class Server implements Party.Server {
 
     // Resolution: Clear locked coins and apply winnings/losses
     if (winner) {
-      winner.lockedCoins = Math.max(0, (winner.lockedCoins || 0) - (duel.bets.find((b: any) => b.playerId === winnerId)?.amount || 0));
+      const winnerBet = duel.bets.find((b: any) => b.playerId === winnerId);
+      winner.lockedCoins = Math.max(0, (winner.lockedCoins || 0) - (winnerBet?.amount || 0));
+
       // Winner gets their own bet back + the total pool of losing bets
+      // Task 3.2 Fix: Correct income for winner
       const loserBetsPool = duel.bets.filter((b: any) => b.targetId === loserId).reduce((sum: number, b: any) => sum + b.amount, 0);
       
-      winner.coins += (duel.bets.find((b: any) => b.playerId === winnerId)?.amount || 0); // Return wager
+      winner.coins += (winnerBet?.amount || 0); // Return wager
       winner.coins += loserBetsPool; // Winnings
       
       winner.stats.wins++;
       winner.stats.totalEarned += loserBetsPool;
       winner.stats.totalWon += loserBetsPool;
       winner.stats.winStreak++;
-      const wBet = duel.bets.find((b: any) => b.playerId === winnerId);
-      if (wBet) wBet.payout = loserBetsPool;
+      if (winnerBet) winnerBet.payout = loserBetsPool;
     }
 
     if (loser) {
@@ -610,9 +635,19 @@ export default class Server implements Party.Server {
           p.coins += steal;
           this.addEvent("item", `Atomic Bomb: Stole ${steal.toLocaleString()} 🪙 from ${target.displayName}`, { playerId: userId });
         }
+
+        // Next player steal
+        const nextPlayerId = this.session.turnOrder[(this.session.activePlayerIndex + 1) % this.session.turnOrder.length];
+        const nextPlayer = this.getPlayer(nextPlayerId);
+        if (nextPlayer && nextPlayerId !== userId && nextPlayerId !== targetId) {
+          const nextSteal = Math.floor(nextPlayer.coins * (item.config?.nextSteal || 0.3));
+          nextPlayer.coins -= nextSteal;
+          p.coins += nextSteal;
+        }
+
         // Global steal
         this.session.players.forEach((pl: any) => {
-          if (pl.id === userId || pl.id === targetId) return;
+          if (pl.id === userId || pl.id === targetId || pl.id === nextPlayerId) return;
           const globalSteal = Math.floor(pl.coins * (item.config?.globalSteal || 0.1));
           pl.coins -= globalSteal;
           p.coins += globalSteal;

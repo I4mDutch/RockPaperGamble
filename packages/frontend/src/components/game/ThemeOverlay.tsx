@@ -27,9 +27,15 @@ export const ThemeOverlay: React.FC = () => {
   return (
     <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
       {effect === 'bomb' && (
-        <div className="absolute inset-0 bg-red-600/20 animate-shake">
+        <div className="absolute inset-0 bg-red-600/30 animate-shake border-[20px] border-red-500/50">
+          <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_20%,#ff000044_100%)]" />
+          <div className="absolute inset-0 overflow-hidden">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="absolute h-px bg-cyan-400/50 w-full animate-bolt" style={{ top: `${Math.random() * 100}%`, animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-9xl opacity-20 filter blur-sm">💥</div>
+            <div className="text-9xl opacity-40 filter blur-sm animate-pulse">☢️</div>
           </div>
         </div>
       )}
@@ -53,6 +59,14 @@ export const ThemeOverlay: React.FC = () => {
           10% { opacity: 1; }
           30% { opacity: 1; }
           100% { opacity: 0; }
+        }
+        @keyframes bolt {
+          0% { transform: translateX(-100%) scaleY(1); opacity: 0; }
+          50% { opacity: 1; transform: translateX(0) scaleY(5); }
+          100% { transform: translateX(100%) scaleY(1); opacity: 0; }
+        }
+        .animate-bolt {
+          animation: bolt 0.2s linear infinite;
         }
         .animate-shake {
           animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;

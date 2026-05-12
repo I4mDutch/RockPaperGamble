@@ -66,7 +66,7 @@ const EventItem = ({ event, index }: { event: GameEvent; index: number }) => {
             {config.label}
           </span>
         </div>
-        <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+        <p className="text-sm font-medium leading-relaxed truncate-safe" style={{ color: 'var(--color-text-primary)' }}>
           {event.message}
         </p>
         <div className="flex items-center gap-2 mt-0.5">

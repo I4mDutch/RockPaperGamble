@@ -16,12 +16,37 @@ export const ItemsShop: React.FC = () => {
 
   if (!session || !me) return null;
 
-  // This would ideally come from the server registry, but we'll define it here for the UI
+  const itemSettings = session.settings.items;
+
   const ITEMS = [
-    { id: 'atomic_bomb', name: 'Atomic Bomb', cost: 3000, description: 'Steal 90% from target + 10% global.', icon: Target },
-    { id: 'nuke', name: 'Nuke', cost: 5000, description: '75% global grab vs 25% backfire.', icon: Zap },
-    { id: 'landmine', name: 'Landmine', cost: 250, description: 'Place a trap in the duel area.', icon: Shield },
-    { id: 'interceptor', name: 'Interceptor', cost: 1000, description: 'Steal double wager in next duel.', icon: Target },
+    {
+      id: 'atomic_bomb',
+      name: 'Atomic Bomb',
+      cost: itemSettings.atomic_bomb.cost,
+      description: `Steal ${(itemSettings.atomic_bomb.targetSteal * 100).toFixed(0)}% from target + ${(itemSettings.atomic_bomb.globalSteal * 100).toFixed(0)}% global.`,
+      icon: Target
+    },
+    {
+      id: 'nuke',
+      name: 'Nuke',
+      cost: itemSettings.nuke.cost,
+      description: `${(itemSettings.nuke.poolTake * 100).toFixed(0)}% global grab vs ${(itemSettings.nuke.backfireRisk * 100).toFixed(0)}% backfire.`,
+      icon: Zap
+    },
+    {
+      id: 'landmine',
+      name: 'Landmine',
+      cost: itemSettings.landmine.cost,
+      description: `Place a trap. Hits for ${itemSettings.landmine.payout.toLocaleString()} 🪙.`,
+      icon: Shield
+    },
+    {
+      id: 'interceptor',
+      name: 'Interceptor',
+      cost: itemSettings.interceptor.cost,
+      description: `Steal double wager (min ${itemSettings.interceptor.minSteal.toLocaleString()} 🪙).`,
+      icon: Target
+    },
   ];
 
   return (
