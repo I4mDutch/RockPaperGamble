@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  UserPlus, UserMinus, CheckCircle, Coins, Trophy, Gift, Play, type LucideIcon, Flag
+  UserPlus, UserMinus, CheckCircle, Coins, Trophy, Gift, Play, type LucideIcon, Flag, Zap
 } from 'lucide-react'
 import type { GameEvent } from '@rpg/shared'
 
@@ -21,6 +21,7 @@ const eventConfigs: Record<GameEvent['type'], EventConfig> = {
   win:   { icon: Trophy,     label: 'Winner',   accentColor: 'var(--color-accent-pop)',       bgColor: 'rgba(245,158,11,0.06)',   iconColor: 'var(--color-accent-pop)' },
   gift:  { icon: Gift,       label: 'Gift',     accentColor: 'var(--color-accent-primary)',   bgColor: 'rgba(124,58,237,0.06)',   iconColor: 'var(--color-accent-primary)' },
   start: { icon: Play,       label: 'Start',    accentColor: 'var(--color-accent-primary)',   bgColor: 'rgba(124,58,237,0.06)',   iconColor: 'var(--color-accent-primary)' },
+  item:  { icon: Zap,        label: 'Item',     accentColor: 'var(--color-accent-primary)',   bgColor: 'rgba(124,58,237,0.06)',   iconColor: 'var(--color-accent-primary)' },
 }
 
 function formatTimestamp(ts: number) {

@@ -11,7 +11,7 @@ export const ThemeOverlay: React.FC = () => {
     const lastEvent = session.eventFeed[session.eventFeed.length - 1];
     if (!lastEvent || Date.now() - lastEvent.timestamp > 2000) return;
 
-    if (lastEvent.type === 'item') {
+    if ((lastEvent.type as string) === 'item') {
       if (lastEvent.itemId === 'atomic_bomb') {
         setEffect('bomb');
         setTimeout(() => setEffect('none'), 1500);
@@ -48,7 +48,7 @@ export const ThemeOverlay: React.FC = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes shake {
           0%, 100% { transform: translate(0, 0); }
           10%, 30%, 50%, 70%, 90% { transform: translate(-10px, -10px); }
@@ -75,7 +75,7 @@ export const ThemeOverlay: React.FC = () => {
         .animate-flash {
           animation: flash 3s ease-out forwards;
         }
-      `}</style>
+      `}} />
     </div>
   );
 };

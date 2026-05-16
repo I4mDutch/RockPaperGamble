@@ -76,7 +76,7 @@ export interface RoundHistory {
 
 export interface GameEvent {
   id: string;
-  type: "join" | "leave" | "bet" | "win" | "gift" | "ready" | "start";
+  type: "join" | "leave" | "bet" | "win" | "gift" | "ready" | "start" | "item";
   playerId?: string;
   playerName?: string;
   amount?: number;

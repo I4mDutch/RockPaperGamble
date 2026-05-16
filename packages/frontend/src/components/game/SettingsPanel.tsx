@@ -1,9 +1,11 @@
 import React from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useAuthStore } from '../../store/authStore';
 
 export const SettingsPanel: React.FC = () => {
-  const { session, updateSettings, socket } = useGameStore();
-  const userId = socket?.id;
+  const { session, updateSettings } = useGameStore();
+  const { user, guestUser } = useAuthStore();
+  const userId = user?.id || guestUser?.id;
   const isHost = session?.hostId === userId;
 
   if (!session || !isHost) return null;

@@ -2,16 +2,12 @@ import React from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { ShoppingBag, Zap, Shield, Target } from 'lucide-react';
 
-const ITEM_ICONS: Record<string, any> = {
-  atomic_bomb: Target,
-  nuke: Zap,
-  landmine: Shield,
-  interceptor: Zap
-};
+import { useAuthStore } from '../../store/authStore';
 
 export const ItemsShop: React.FC = () => {
-  const { session, socket, purchaseItem, activateItem } = useGameStore();
-  const userId = socket?.id;
+  const { session, purchaseItem, activateItem } = useGameStore();
+  const { user, guestUser } = useAuthStore();
+  const userId = user?.id || guestUser?.id;
   const me = session?.players.find(p => p.id === userId);
 
   if (!session || !me) return null;
